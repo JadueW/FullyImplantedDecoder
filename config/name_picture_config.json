@@ -1,0 +1,34 @@
+{
+    "camera": {
+        "rgbgain": [100.0, 100.0, 100.0],
+        "exposure_time": 10,
+        "cam_gamma": 50.0,
+        "cam_Contrast": 100,
+        "cam_Saturation": 100,
+        "cam_Sharpness": 0,
+        "cam_AnalogGain": 0,
+        "save_dir": "recordings",
+        "video_quality": 70,
+        "target_fps": 45,
+        "min_acceptable_fps": 30,
+        "encoding": "h264",
+        "camera_settings": {
+            "trigger_mode": 0,
+            "ae_state": 0,
+            "isp_format": "BGR8"
+        }
+    },
+    "experiment": {
+        "com_port": "COM3",
+        "big_text_size": 0.25,
+        "small_text_size": 0.25,
+        "trial_repeats": 1,
+        "block_repeats":1 ,
+		"task_desc":{"1":"图片命名"},
+		"task_type":1,
+		"selected_rows_desc":"左开右闭",
+        "selected_rows": "0:10",
+        "random_seed": 42,
+        "conditions":"conditions.csv"
+    }
+}

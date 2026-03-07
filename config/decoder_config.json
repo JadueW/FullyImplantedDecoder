@@ -1,0 +1,37 @@
+{
+  "fs": 2000.0,
+  "class_labels": ["rest", "task"],
+  "frequency_bands": {
+    "delta": [1, 4],
+    "theta": [4, 8],
+    "alpha": [8, 13],
+    "beta": [13, 30],
+    "low_gamma": [30, 55],
+    "high_gamma": [70, 150]
+  },
+  "preprocess": {
+    "lowcut": 1.0,
+    "highcut": 200.0,
+    "bandpass_order": 4,
+    "notch_freqs": [50, 100, 150],
+    "notch_bandwidth": 2.0,
+    "use_car": false
+  },
+  "features": {
+    "nperseg": 512,
+    "noverlap": 256,
+    "nfft": 1024,
+    "use_relative_power": true,
+    "total_power_range": [1, 150]
+  },
+  "model": {
+    "penalty": "elasticnet",
+    "solver": "saga",
+    "max_iter": 20000,
+    "class_weight": "balanced",
+    "random_state": 42,
+    "decision_threshold": 0.5,
+    "confidence_threshold": 0.7
+  },
+  "max_decode_time": 0.05
+}

@@ -1,0 +1,39 @@
+{
+    "camera": {
+        "rgbgain": [100.0, 100.0, 100.0],
+        "exposure_time": 20,
+        "cam_gamma": 50.0,
+        "cam_Contrast": 100,
+        "cam_Saturation": 100,
+        "cam_Sharpness": 0,
+        "cam_AnalogGain": 0,
+        "save_dir": "recordings/upper_limb_movement/",
+        "video_quality": 70,
+        "target_fps": 45,
+        "min_acceptable_fps": 30,
+        "encoding": "h264",
+        "camera_settings": {
+            "trigger_mode": 0,
+            "ae_state": 0,
+            "isp_format": "BGR8"
+        }
+    },
+
+    "peripheral_stats": {
+        "is_camera_connected" : false,
+        "is_audio_connected": false
+    },
+
+    "experiment": {
+        "com_port": "COM4",
+        "big_text_size": 0.5,
+        "small_text_size": 0.5,
+        "trial_repeats": 3,
+		"block_repeats": 4,
+		"task_desc":{"0":"粗大","1":"精细"},
+		"task_type":0,
+        "random_seed": 42,
+        "conditions":"D:\\dev\\paradigm_dev\\resources\\conditions\\upper_limb_movement\\condition.csv",
+        "block_conditions": "D:\\dev\\paradigm_dev\\resources\\conditions\\upper_limb_movement\\block_condition.csv"
+    }
+}

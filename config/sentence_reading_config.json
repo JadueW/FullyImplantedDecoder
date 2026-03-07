@@ -1,0 +1,42 @@
+{
+    "camera": {
+        "rgbgain": [100.0, 100.0, 100.0],
+        "exposure_time": 25,
+        "cam_gamma": 50.0,
+        "cam_Contrast": 100,
+        "cam_Saturation": 100,
+        "cam_Sharpness": 0,
+        "cam_AnalogGain": 0,
+        "save_dir": "recordings",
+        "video_quality": 70,
+        "target_fps": 45,
+        "min_acceptable_fps": 30,
+        "encoding": "h264",
+        "camera_settings": {
+            "trigger_mode": 0,
+            "ae_state": 0,
+            "isp_format": "BGR8"
+        }
+    },
+    "audio": {
+        "channels": 1,
+        "rate": 44100,
+        "chunk": 1024,
+        "format": 8,
+        "device_index": null
+    },
+    "experiment": {
+        "com_port": "COM7",
+        "big_text_size": 0.2,
+        "small_text_size": 0.1,
+        "trial_repeats": 1,
+        "block_repeats": 1,
+		"highlight_duration":1.2,
+		"task_desc":{"1":"语句跟读"},
+		"task_type":1,
+		"selected_rows_desc":"左开右闭",
+        "selected_rows": "0:10",
+        "random_seed": 42,
+        "conditions":"expanded_sentences.csv"
+    }
+}
