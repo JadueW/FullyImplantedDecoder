@@ -562,13 +562,3 @@ class StimulatorController:
                 pass
 
 
-# 便捷函数
-def create_stimulator_controller(port,baudrate,debug):
-    controller = StimulatorController(
-        port=port,
-        baudrate=baudrate,
-        timeout=1000,
-        debug=debug
-    )
-    controller.connect()
-    return controller
