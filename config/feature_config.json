@@ -1,13 +1,13 @@
 {
-  "features":
-  {
+  "features": {
     "psd_method": "welch",
     "nperseg": 512,
     "noverlap": 256,
-    "total_power_range": [1.0, 200.0],
+    "nfft": 1024,
+    "total_power_range": [1.0, 150.0],
     "bands": {
       "beta": [13.0, 30.0],
-      "high_gamma": [70.0, 200.0]
+      "high_gamma": [70.0, 150.0]
     },
     "use_log_abs_power": true,
     "feature_order": [
@@ -17,5 +17,4 @@
       "high_gamma_rel_psd"
     ]
   }
-
 }
