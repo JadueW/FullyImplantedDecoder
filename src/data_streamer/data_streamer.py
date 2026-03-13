@@ -1,323 +1,338 @@
-"""
-数据流管理器 - 连接TCP数据流与解码器
-
-对应需求：
-    任务准备期间开始获取数据5s窗口，任务执行期间每隔100ms提取一次数据，并进行解码
-    解码器检测到运动意图，输出刺激器指令（数据提供）
-    解码日志的记录，包括接收到数据时间、数据shape（时间戳和数据信息）
-"""
-import sys
-import os
+import threading
 import time
 import warnings
-import threading
+from copy import deepcopy
+
 import numpy as np
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(os.path.dirname(current_dir))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-
-from src.transmission.trans_manager.remoteManagerTTL import RemoteManagerTTL
+from src.decoder.features_extract.feature_extract import extract_feature
+from src.decoder.online_inference.ml_decoder.ml_decoder import decode
+from src.decoder.preprocess.preprocessor import preprocess_data
 
 
 class DataStreamer:
-    """
-    数据流管理器
-    """
 
-    def __init__(self, remote_manager, config):
-        """
-        初始化数据流管理器
-        :param remote_manager: RemoteManagerTTL实例，用于TCP数据获取
-        :param config: 配置字典，包含采样率、通道数等参数
-        """
+    def __init__(self, data_source, decoder_config, feature_config=None, model_bundle=None):
+        self.data_source = data_source
+        self.decoder_config = decoder_config
+        self.feature_config = feature_config
+        self.model_bundle = model_bundle
 
-        self.rm = remote_manager
-        self.fs = config.get('fs', 2000)
-        self.num_ch = config.get('num_ch', 128)
+        self.fs = int(decoder_config.get('fs', 2000))
+        self.num_ch = int(decoder_config.get('num_ch', 128))
+        self.initial_window_s = float(decoder_config.get('preparation_window_size', 5.0))
+        self.decode_interval_s = float(decoder_config.get('decode_interval', 0.1))
+        self.decode_window_s = float(decoder_config.get('decode_window_size', self.initial_window_s))
 
-        # 任务执行时长
-        self.buffer_duration = 10.0
-        self.buffer_size = int(self.buffer_duration * self.fs)
+        self.initial_window_points = int(self.initial_window_s * self.fs)
+        self.decode_window_points = int(self.decode_window_s * self.fs)
+        self.step_points = max(1, int(self.decode_interval_s * self.fs))
 
-        # 解码窗口大小和解码间隔
-        self.decode_window_size = config.get('decode_window_size', 0.5)
-        self.decode_interval = config.get('decode_interval', 0.1)
+        self.is_streaming = False
+        self.stream_start_time = 0.0
+        self.session_start_time = 0.0
 
-        self.preparation_window_size = config.get('preparation_window_size', 5.0)  # 5秒准备期
-
-        self.is_recording = False  # 是否正在记录数据
-        self.start_time = 0.0  #实验开始时间
-        self.last_decode_time = -float('inf')  # 上次解码时间，用于控制100ms间隔
-
-
-        self.data_stats = {
-            'total_samples_received': 0,  # 总接收样本数
-            'total_decode_windows': 0,  # 总解码窗口数
-            'last_data_timestamp': 0.0,  # 最后一次接收数据的时间戳
-            'last_data_shape': (0, 0)  # 最后一次接收数据的shape
-        }
-
+        self._decode_thread = None
+        self._stop_event = threading.Event()
         self._lock = threading.Lock()
 
-        print(f"DataStreamer初始化完成:")
-        print(f"  - 采样率: {self.fs} Hz")
-        print(f"  - 通道数: {self.num_ch}")
-        print(f"  - 解码窗口: {self.decode_window_size} s")
-        print(f"  - 解码间隔: {self.decode_interval} s")
-        print(f"  - 准备期窗口: {self.preparation_window_size} s")
+        self.decode_window = None
+        self.logs = []
+        self._consumed_result_version = 0
+        self._next_log_id = 1
 
-    def start_recording(self):
-        """
-        任务准备期间开始获取数据
-        :return:
-        """
-        try:
-            with self._lock:
-                if self.is_recording:
-                    warnings.warn("数据记录已经在运行中")
-                    return True
-                print("\n=== 启动数据流记录 ===")
+        self.shared_state = {
+            'result_version': 0,
+            'latest_result': None,
+            'latest_log': None,
+            'latest_data_timestamp_s': 0.0,
+            'latest_data_shape': (0, 0),
+            'decode_window_shape': (0, 0),
+            'is_decode_running': False,
+            'decode_count': 0,
+            'last_error': '',
+        }
 
-                # 初始化设备连接
-                self.rm.initialize_device(mode=0)  # mode=0: 同时使用命令和数据通道
-                # 开始采集数据
-                self.rm.begin_collect()
-                # 记录开始时间
-                self.start_time = time.time()
-                self.is_recording = True
-                # 获取系统信息并打印
-                info = self.rm.get_info()
-                print(f"数据采集已启动:")
-                print(f"  - 采样率: {info['fs']} Hz")
-                print(f"  - 通道数: {info['num_ch']}")
-                print(f"  - 缓冲区大小: {info['num_buffer_sample']} 样本")
-                print(f"  - 启动时间: {self.start_time:.3f}")
+    def set_decoder(self, feature_config=None, model_bundle=None):
+        if feature_config is not None:
+            self.feature_config = feature_config
+        if model_bundle is not None:
+            self.model_bundle = model_bundle
 
+    def start_streaming(self):
+        with self._lock:
+            if self.is_streaming:
                 return True
 
-        except Exception as e:
-            print(f"启动数据记录失败: {e}")
-            return False
+            try:
+                if hasattr(self.data_source, 'initialize_device') and hasattr(self.data_source, 'begin_collect'):
+                    self.data_source.initialize_device(mode=0)
+                    self.data_source.begin_collect()
+                else:
+                    if hasattr(self.data_source, 'connect'):
+                        try:
+                            self.data_source.connect()
+                        except Exception:
+                            pass
+                    if hasattr(self.data_source, 'start'):
+                        try:
+                            self.data_source.start()
+                        except Exception:
+                            pass
 
-    def get_preparation_window(self, duration):
-        """
-        获取准备期数据窗口
-        :param duration: 窗口时长
-        :return: 数据数组，shape=(n_channels, n_timepoints)
-        """
+                self.stream_start_time = time.time()
+                self.is_streaming = True
+                return True
+            except Exception as exc:
+                warnings.warn(f'Failed to start streaming: {exc}')
+                return False
 
-        if not self.is_recording:
-            warnings.warn("数据记录未启动，请先调用start_recording()")
+    def stop_streaming(self):
+        self.stop_decode_session(wait=True)
+
+        with self._lock:
+            if not self.is_streaming:
+                return True
+
+            try:
+                if hasattr(self.data_source, 'stop_collect'):
+                    try:
+                        self.data_source.stop_collect()
+                    except Exception:
+                        pass
+                if hasattr(self.data_source, 'close_connection'):
+                    try:
+                        self.data_source.close_connection(stop_collect=False)
+                    except TypeError:
+                        self.data_source.close_connection()
+                elif hasattr(self.data_source, 'close_conn'):
+                    self.data_source.close_conn()
+
+                self.is_streaming = False
+                return True
+            except Exception as exc:
+                warnings.warn(f'Failed to stop streaming: {exc}')
+                return False
+
+    def _get_data(self, num_points):
+        data = self.data_source.get_data(int(num_points))
+        if data is None:
             return None
+        data = np.asarray(data, dtype=float)
+        if data.ndim != 2 or data.size == 0:
+            return None
+        return data
 
-        if duration is None:
-            duration = self.preparation_window_size
+    def _relative_time_s(self):
+        if self.stream_start_time <= 0:
+            return 0.0
+        return time.time() - self.stream_start_time
 
+    def initialize_decode_window(self, duration_s=None, timeout_s=15.0):
+        if duration_s is None:
+            duration_s = self.initial_window_s
+
+        num_points = int(duration_s * self.fs)
+        deadline = time.perf_counter() + timeout_s
+
+        while time.perf_counter() < deadline:
+            data = self._get_data(num_points)
+            if data is not None and data.shape[1] >= num_points:
+                self.decode_window = data[:, -num_points:].copy()
+                with self._lock:
+                    self.shared_state['decode_window_shape'] = tuple(self.decode_window.shape)
+                return self.decode_window.copy()
+            time.sleep(0.05)
+
+        raise RuntimeError('Failed to get initial decode window within timeout.')
+
+    def flush_buffer(self):
         try:
-            # 计算需要获取的数据点数
-            num_points = int(duration * self.fs)
+            if hasattr(self.data_source, 'getBufferTime'):
+                buffer_time_s = float(self.data_source.getBufferTime())
+                buffer_points = max(0, int(buffer_time_s * self.fs))
+                if buffer_points > 0:
+                    self._get_data(buffer_points)
+                    return buffer_points
 
-            print(f"\n获取准备期数据窗口:")
-            print(f"  - 时长: {duration} 秒")
-            print(f"  - 数据点数: {num_points}")
-            print(f"  - 期望shape: ({self.num_ch}, {num_points})")
+            if hasattr(self.data_source, 'get_info'):
+                info = self.data_source.get_info()
+                buffer_points = int(info.get('num_buffer_sample', 0))
+                if buffer_points > 0:
+                    self._get_data(buffer_points)
+                    return buffer_points
+        except Exception as exc:
+            warnings.warn(f'Failed to flush buffer: {exc}')
 
-            # 从TCP缓冲区获取数据
-            data = self.rm.get_data(num_points)
+        return 0
 
-            if data is None or data.size == 0:
-                warnings.warn("获取准备期数据失败：返回数据为空")
+    def _append_chunk(self, data_chunk):
+        if self.decode_window is None:
+            self.decode_window = data_chunk.copy()
+            return self.decode_window.copy()
+
+        chunk_points = data_chunk.shape[1]
+        target_points = self.decode_window.shape[1]
+        updated = np.concatenate([self.decode_window, data_chunk], axis=1)
+        if updated.shape[1] > target_points:
+            updated = updated[:, -target_points:]
+        self.decode_window = updated
+        return self.decode_window.copy()
+
+    def _decode_loop(self):
+        with self._lock:
+            self.shared_state['is_decode_running'] = True
+            self.shared_state['last_error'] = ''
+
+        while not self._stop_event.is_set():
+            loop_start = time.perf_counter()
+
+            try:
+                data_chunk = self._get_data(self.step_points)
+                if data_chunk is None or data_chunk.shape[1] < self.step_points:
+                    self._stop_event.wait(0.01)
+                    continue
+
+                if data_chunk.shape[1] > self.step_points:
+                    data_chunk = data_chunk[:, -self.step_points:]
+
+                decode_window = self._append_chunk(data_chunk)
+                data_timestamp_s = self._relative_time_s()
+
+                preprocess_start = time.perf_counter()
+                preprocessed = preprocess_data(decode_window, self.fs, self.decoder_config)
+                preprocess_time_ms = (time.perf_counter() - preprocess_start) * 1000.0
+
+                decode_start = time.perf_counter()
+                features = extract_feature(preprocessed, self.fs, self.feature_config)
+                decode_result = decode(features, self.model_bundle)
+                decode_time_ms = (time.perf_counter() - decode_start) * 1000.0
+
+                log_entry = {
+                    'id': self._next_log_id,
+                    'data_received_time_s': round(data_timestamp_s, 6),
+                    'data_shape': tuple(data_chunk.shape),
+                    'decode_window_shape': tuple(decode_window.shape),
+                    'preprocess_time_ms': round(preprocess_time_ms, 3),
+                    'decode_time_ms': round(decode_time_ms, 3),
+                    'decode_result': decode_result.get('predicted_target'),
+                    'confidence': decode_result.get('confidence'),
+                    'command_sent': 0,
+                    'command_content': '',
+                }
+                self._next_log_id += 1
+
+                with self._lock:
+                    self.logs.append(log_entry)
+                    self.shared_state['result_version'] += 1
+                    self.shared_state['latest_result'] = deepcopy(decode_result)
+                    self.shared_state['latest_log'] = deepcopy(log_entry)
+                    self.shared_state['latest_data_timestamp_s'] = data_timestamp_s
+                    self.shared_state['latest_data_shape'] = tuple(data_chunk.shape)
+                    self.shared_state['decode_window_shape'] = tuple(decode_window.shape)
+                    self.shared_state['decode_count'] += 1
+                    self.shared_state['last_error'] = ''
+
+            except Exception as exc:
+                with self._lock:
+                    self.shared_state['last_error'] = str(exc)
+                warnings.warn(f'Decode loop error: {exc}')
+
+            elapsed = time.perf_counter() - loop_start
+            sleep_left = self.decode_interval_s - elapsed
+            if sleep_left > 0:
+                self._stop_event.wait(sleep_left)
+
+        with self._lock:
+            self.shared_state['is_decode_running'] = False
+
+    def start_decode_session(self, initial_window_s=None, timeout_s=15.0, flush_after_init=True):
+        if self.feature_config is None or self.model_bundle is None:
+            raise RuntimeError('feature_config and model_bundle must be set before decoding.')
+
+        if not self.is_streaming:
+            started = self.start_streaming()
+            if not started:
+                raise RuntimeError('Failed to start data streaming.')
+
+        with self._lock:
+            if self._decode_thread is not None and self._decode_thread.is_alive():
+                warnings.warn('Decode session is already running.')
+                return False
+
+        self.session_start_time = time.time()
+        self.logs = []
+        self._next_log_id = 1
+        self._consumed_result_version = 0
+
+        self.initialize_decode_window(duration_s=initial_window_s, timeout_s=timeout_s)
+        if flush_after_init:
+            self.flush_buffer()
+
+        self._stop_event.clear()
+        self._decode_thread = threading.Thread(
+            target=self._decode_loop,
+            name='DataStreamerDecodeThread',
+            daemon=True,
+        )
+        self._decode_thread.start()
+        return True
+
+    def stop_decode_session(self, wait=True):
+        self._stop_event.set()
+
+        thread = self._decode_thread
+        if wait and thread is not None and thread.is_alive():
+            thread.join(timeout=2.0)
+
+        self._decode_thread = None
+        return True
+
+    def get_latest_result(self):
+        with self._lock:
+            result = self.shared_state['latest_result']
+            return deepcopy(result) if result is not None else None
+
+    def consume_latest_result(self):
+        with self._lock:
+            version = self.shared_state['result_version']
+            if version <= self._consumed_result_version:
                 return None
 
-            actual_shape = data.shape
-            print(f"  - 实际shape: {actual_shape}")
+            self._consumed_result_version = version
+            result = deepcopy(self.shared_state['latest_result'])
+            log_entry = deepcopy(self.shared_state['latest_log'])
 
-            # 更新统计信息
-            current_time = time.time()
-            self.data_stats['last_data_timestamp'] = current_time - self.start_time
-            self.data_stats['last_data_shape'] = actual_shape
-            self.data_stats['total_samples_received'] += data.size
+        return {
+            'result': result,
+            'log': log_entry,
+            'version': version,
+        }
 
-            return data
+    def update_latest_command(self, command_sent, command_content=''):
+        with self._lock:
+            if self.logs:
+                self.logs[-1]['command_sent'] = int(command_sent)
+                self.logs[-1]['command_content'] = command_content
+            if self.shared_state['latest_log'] is not None:
+                self.shared_state['latest_log']['command_sent'] = int(command_sent)
+                self.shared_state['latest_log']['command_content'] = command_content
 
-        except Exception as e:
-            print(f"获取准备期数据窗口失败: {e}")
+    def get_logs(self):
+        with self._lock:
+            return deepcopy(self.logs)
+
+    def get_shared_state(self):
+        with self._lock:
+            return deepcopy(self.shared_state)
+
+    def get_decode_window(self):
+        if self.decode_window is None:
             return None
-
-    def get_decode_window(self, window_size):
-        """
-        获取用于解码的数据窗口
-        :param window_size: 解码窗口大小
-        :return:
-        (data, timestamp): 元组
-            - data: numpy.ndarray
-            - timestamp: 相对于实验开始的时间戳（秒）
-        """
-        if not self.is_recording:
-            warnings.warn("数据记录未启动，请先调用start_recording()")
-            return None, 0.0
-
-        if window_size is None:
-            window_size = self.decode_window_size
-
-        # 计算当前时间（相对于实验开始）
-        current_time = time.time()
-        elapsed = current_time - self.start_time
-
-        # 检查是否距上次解码超过100ms
-        time_since_last_decode = elapsed - self.last_decode_time
-
-        if time_since_last_decode < self.decode_interval:
-            return None, elapsed
-
-        try:
-            # 计算需要获取的数据点数
-            num_points = int(window_size * self.fs)
-
-            # 从TCP缓冲区获取最新数据
-            data = self.rm.get_data(num_points)
-
-            if data is None or data.size == 0:
-                return None, elapsed
-
-            # 更新最后一次解码时间
-            self.last_decode_time = elapsed
-
-            # 更新统计信息
-            self.data_stats['total_decode_windows'] += 1
-            self.data_stats['last_data_timestamp'] = elapsed
-            self.data_stats['last_data_shape'] = data.shape
-            self.data_stats['total_samples_received'] += data.size
-
-            # 打印调试信息
-            if self.data_stats['total_decode_windows'] % 10 == 0:  # 每10次打印一次
-                print(f"解码窗口 #{self.data_stats['total_decode_windows']}: "
-                      f"time={elapsed:.2f}s, shape={data.shape}")
-
-            return data, elapsed
-
-        except Exception as e:
-            print(f"获取解码窗口失败: {e}")
-            return None, elapsed
-
-    def get_latest_data(self, num_points):
-        """
-        获取最新数据
-        :param num_points: 要获取的数据点数
-        :return: 数据数组
-        """
-
-        if not self.is_recording:
-            warnings.warn("数据记录未启动，请先调用start_recording()")
-            return None
-
-        try:
-            data = self.rm.get_data(num_points)
-            return data
-        except Exception as e:
-            print(f"获取最新数据失败: {e}")
-            return None
-
-    def check_buffer_status(self):
-        """
-        检查缓冲区状态
-        :return:
-        """
-        try:
-            info = self.rm.get_info()
-            buffer_samples = info.get('num_buffer_sample', 0)
-            buffer_time = buffer_samples / self.fs if self.fs > 0 else 0
-            buffer_usage = buffer_time / self.buffer_size if self.buffer_size > 0 else 0
-
-            # 警告阈值：80%
-            is_warning = buffer_usage > 0.8
-
-            status = {
-                'buffer_time': buffer_time,
-                'buffer_samples': buffer_samples,
-                'buffer_usage': buffer_usage,
-                'is_warning': is_warning,
-                'info': info
-            }
-
-            if is_warning:
-                print(f"⚠️  警告: 缓冲区使用率 {buffer_usage*100:.1f}%")
-
-            return status
-
-        except Exception as e:
-            print(f"检查缓冲区状态失败: {e}")
-            return {
-                'buffer_time': 0,
-                'buffer_usage': 0,
-                'is_warning': True,
-                'info': {}
-            }
-
-    def get_data_stats(self):
-        """
-        获取数据统计信息
-        :return:
-        """
-        stats = self.data_stats.copy()
-
-        # 计算录制时长
-        if self.is_recording and self.start_time > 0:
-            stats['recording_duration'] = time.time() - self.start_time
-        else:
-            stats['recording_duration'] = 0
-
-        return stats
-
-    def reset_decode_timer(self):
-        """
-        重置计时器
-        :return:
-        """
-        self.last_decode_time = -float('inf')
-        print("解码计时器已重置")
-
-    def stop_recording(self):
-        try:
-            with self._lock:
-                if not self.is_recording:
-                    warnings.warn("数据记录未在运行")
-                    return True
-
-                print("\n=== 停止数据流记录 ===")
-
-                # 打印最终统计
-                stats = self.get_data_stats()
-                print(f"数据统计:")
-                print(f"  - 总接收样本数: {stats['total_samples_received']}")
-                print(f"  - 总解码窗口数: {stats['total_decode_windows']}")
-                print(f"  - 录制时长: {stats['recording_duration']:.2f} 秒")
-
-                # 停止采集
-                self.rm.stop_collect()
-
-                # 关闭连接
-                self.rm.close_connection(stop_collect=False)
-
-                self.is_recording = False
-
-                print("数据记录已停止")
-                return True
-
-        except Exception as e:
-            print(f"停止数据记录失败: {e}")
-            return False
+        return self.decode_window.copy()
 
     def __del__(self):
-        if self.is_recording:
-            try:
-                self.stop_recording()
-            except:
-                pass
-
-
-if __name__ == '__main__':
-
-    pass
+        try:
+            self.stop_streaming()
+        except Exception:
+            pass
