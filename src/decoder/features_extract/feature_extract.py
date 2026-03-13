@@ -2,7 +2,14 @@ import numpy as np
 from scipy.signal import welch
 
 
+def normalize_feature_config(feature_config):
+    if 'features' in feature_config:
+        return feature_config['features']
+    return feature_config
+
+
 def build_feature_layout(feature_config, n_channels):
+    feature_config = normalize_feature_config(feature_config)
     return {
         'n_channels': n_channels,
         'feature_order': list(feature_config['feature_order']),
@@ -11,6 +18,7 @@ def build_feature_layout(feature_config, n_channels):
 
 
 def _prepare_masks(freqs, feature_config):
+    feature_config = normalize_feature_config(feature_config)
     masks = {}
     for band_name, band_range in feature_config['bands'].items():
         low, high = band_range
@@ -20,7 +28,14 @@ def _prepare_masks(freqs, feature_config):
     return masks, total_mask
 
 
+def _safe_band_mean(psd, mask):
+    if not np.any(mask):
+        return np.zeros(psd.shape[0], dtype=float)
+    return np.mean(psd[:, mask], axis=1)
+
+
 def _compute_sample_features(sample, fs, feature_config, masks, total_mask):
+    feature_config = normalize_feature_config(feature_config)
     _, psd = welch(
         sample,
         fs=fs,
@@ -29,11 +44,11 @@ def _compute_sample_features(sample, fs, feature_config, masks, total_mask):
         axis=-1
     )
     eps = np.finfo(float).eps
-    total_power = np.mean(psd[:, total_mask], axis=1)
+    total_power = _safe_band_mean(psd, total_mask)
     total_power = np.maximum(total_power, eps)
 
-    beta_power = np.mean(psd[:, masks['beta']], axis=1)
-    high_gamma_power = np.mean(psd[:, masks['high_gamma']], axis=1)
+    beta_power = _safe_band_mean(psd, masks['beta'])
+    high_gamma_power = _safe_band_mean(psd, masks['high_gamma'])
     beta_power = np.maximum(beta_power, eps)
     high_gamma_power = np.maximum(high_gamma_power, eps)
 
@@ -56,30 +71,43 @@ def _compute_sample_features(sample, fs, feature_config, masks, total_mask):
     return np.concatenate([block_map[name] for name in feature_config['feature_order']])
 
 
-def extract_feature(datasets, feature_config):
-    n_channels = datasets.shape[0]
+def extract_feature(data, fs, feature_config, return_metadata=False):
+
+    feature_config = normalize_feature_config(feature_config)
+    data = np.asarray(data, dtype=float)
+
+    if data.ndim == 2:
+        samples = data[np.newaxis, ...]
+        squeeze_output = True
+    elif data.ndim == 3:
+        samples = data
+        squeeze_output = False
+    else:
+        raise ValueError(
+            "Expected `data` with shape (n_channels, n_timepoints) "
+            "or (n_windows, n_channels, n_timepoints)."
+        )
+
+    n_channels = samples.shape[1]
     freqs, _ = welch(
-        datasets,
+        samples[0],
         fs=fs,
         nperseg=feature_config['nperseg'],
         noverlap=feature_config['noverlap'],
         axis=-1
     )
     masks, total_mask = _prepare_masks(freqs, feature_config)
+    feature_rows = [
+        _compute_sample_features(sample, fs, feature_config, masks, total_mask)
+        for sample in samples
+    ]
+    feature_array = np.asarray(feature_rows, dtype=float)
+    feature_layout = build_feature_layout(feature_config, n_channels)
 
-    feature_bundle = {
-        'datasets': {},
-        'label_mapping': dict(bundle['label_mapping']),
-        'fs': bundle['fs'],
-        'metadata': dict(bundle.get('metadata', {}))
-    }
-    feature_bundle['metadata']['feature_layout'] = build_feature_layout(feature_config, n_channels)
+    if squeeze_output:
+        feature_array = feature_array[0]
 
-    for class_id in class_ids:
-        rows = []
-        data_array = np.asarray(bundle['datasets'][class_id])
-        for sample in data_array:
-            rows.append(_compute_sample_features(sample, bundle['fs'], feature_config, masks, total_mask))
-        feature_bundle['datasets'][class_id] = np.asarray(rows, dtype=float)
+    if return_metadata:
+        return feature_array, feature_layout
 
-    return feature_bundle
+    return feature_array
