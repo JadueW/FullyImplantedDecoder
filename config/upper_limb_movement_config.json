@@ -28,6 +28,7 @@
 		"host":"127.0.0.1",
 		"port":5001,
         "com_port": "COM4",
+        "stim_com_port": "COM3",
         "big_text_size": 0.25,
         "small_text_size": 0.15,
         "trial_repeats": 1,
