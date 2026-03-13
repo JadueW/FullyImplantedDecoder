@@ -25,15 +25,20 @@
     },
 
     "experiment": {
+		"host":"127.0.0.1",
+		"port":5001,
         "com_port": "COM4",
-        "big_text_size": 0.5,
-        "small_text_size": 0.5,
-        "trial_repeats": 3,
-		"block_repeats": 4,
+        "big_text_size": 0.25,
+        "small_text_size": 0.15,
+        "trial_repeats": 1,
+		"block_repeats": 1,
 		"task_desc":{"0":"粗大","1":"精细"},
 		"task_type":0,
         "random_seed": 42,
-        "conditions":"D:\\dev\\paradigm_dev\\resources\\conditions\\upper_limb_movement\\condition.csv",
-        "block_conditions": "D:\\dev\\paradigm_dev\\resources\\conditions\\upper_limb_movement\\block_condition.csv"
+		"sound_dir": "C:\\Users\\70706\\welink\\proj\\6-decoding\\FullyImplantedDecoder\\resources\\audios\\upper_limb_movement",
+		"video_dir": "C:\\Users\\70706\\welink\\proj\\6-decoding\\FullyImplantedDecoder\\resources\\videos\\upperlimb",
+        "video_direction":"right",
+		"conditions":"C:\\Users\\70706\\welink\\proj\\6-decoding\\FullyImplantedDecoder\\resources\\conditions\\upper_limb_movement\\condition.csv",
+        "block_conditions": "C:\\Users\\70706\\welink\\proj\\6-decoding\\FullyImplantedDecoder\\resources\\conditions\\upper_limb_movement\\block_condition.csv"
     }
 }
