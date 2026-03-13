@@ -2,9 +2,15 @@ import threading
 import time
 import os
 import json
+import sys
 
 import peripheral.mvsdk as mvsdk
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+print(project_root)
 
 def read_config(device="camera",config_file_path=None):
     """
@@ -24,7 +30,7 @@ def read_config(device="camera",config_file_path=None):
 class Config:
 # class CameraConfig:
     # 读取配置文件
-    config_file = r"D:\dev\paradigm_dev\config\upper_limb_movement_config.json"
+    config_file = os.path.join(project_root, r"config\upper_limb_movement_config.json")
     # 获取实验配置
     camera_config = read_config(device="camera",config_file_path=config_file)
 

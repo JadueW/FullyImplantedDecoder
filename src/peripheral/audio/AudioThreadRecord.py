@@ -1,12 +1,18 @@
 import threading
 import time
 import os
+import sys
 import json
 import wave
 import pyaudio
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-def read_audio_config(device="audio",config_file_path=None):
+
+def read_audio_config(device="audio", config_file_path=None):
     """
         device: audio / experiment
         """
@@ -23,7 +29,7 @@ def read_audio_config(device="audio",config_file_path=None):
 
 class AudioConfig:
     # 读取配置文件
-    config_file = r"D:\dev\paradigm_dev\config\upper_limb_movement_config.json"
+    config_file = os.path.join(project_root, r"config\upper_limb_movement_config.json")
     # 获取实验配置
     audio_config = read_audio_config(device="audio", config_file_path=config_file)
 
@@ -42,7 +48,7 @@ class AudioThread(threading.Thread):
         self.name = name
         self.exit_event = exit_event
         self.p = pyaudio.PyAudio()
-        
+
         # 如果没有指定设备索引，则列出所有可用设备并使用默认设备
         if AudioConfig.device_index is None:
             print("可用的音频输入设备:")
@@ -54,7 +60,7 @@ class AudioThread(threading.Thread):
             info = self.p.get_default_input_device_info()
             AudioConfig.device_index = info['index']
             print(f"使用默认输入设备: {info['name']} (索引: {AudioConfig.device_index})")
-        
+
         # 确保audio文件夹存在
         save_dir = os.path.join(os.getcwd(), AudioConfig.save_dir, "audio_recordings")
         print(f"save_dir: {save_dir}")
@@ -64,7 +70,7 @@ class AudioThread(threading.Thread):
 
         # if not os.path.exists("./audio"): 
         #     os.makedirs("./audio")
-            
+
         # 创建录音文件
         # self.filename = f"./audio/{int(time.time())}_audio.wav"
         self.filename = os.path.join(save_dir, f"{int(time.time())}_audio.wav")
@@ -72,7 +78,7 @@ class AudioThread(threading.Thread):
         self.wf.setnchannels(AudioConfig.channels)
         self.wf.setsampwidth(self.p.get_sample_size(pyaudio.paInt16))
         self.wf.setframerate(AudioConfig.rate)
-        
+
         # 打开音频流
         self.stream = self.p.open(
             format=pyaudio.paInt16,
@@ -86,7 +92,7 @@ class AudioThread(threading.Thread):
 
     def run(self):
         print(f"开始录制音频: {self.name}")
-        
+
         while not self.exit_event.is_set():
             # 读取音频数据并写入文件
             try:
@@ -98,7 +104,7 @@ class AudioThread(threading.Thread):
                     break
             except Exception as e:
                 print(f"音频录制错误: {e}")
-        
+
         # 退出清理
         self.cleanup()
 
@@ -107,15 +113,15 @@ class AudioThread(threading.Thread):
         if hasattr(self, 'stream') and self.stream:
             self.stream.stop_stream()
             self.stream.close()
-        
+
         # 关闭音频文件
         if hasattr(self, 'wf') and self.wf:
             self.wf.close()
-            
+
         # 终止PyAudio
         if hasattr(self, 'p') and self.p:
             self.p.terminate()
-            
+
         print(f"音频录制已停止，文件已保存: {self.filename}")
 
 
@@ -151,7 +157,6 @@ def exit_audio_thread(audio_thread):
         print("音频录制线程正在关闭...")
         audio_thread.join()  # 使用join()等待线程完成
     print("音频录制已结束。Audio recording exit. Time: ", time.time())
-
 
 
 if __name__ == '__main__':
