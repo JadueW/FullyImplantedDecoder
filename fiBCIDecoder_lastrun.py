@@ -1,8 +1,8 @@
 ﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-This experiment was created using PsychoPy3 Experiment Builder (v2025.1.0),
-    on 三月 12, 2026, at 19:15
+This experiment was created using PsychoPy3 Experiment Builder (v2024.2.5),
+    on 三月 13, 2026, at 18:20
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -17,12 +17,11 @@ from psychopy import prefs
 from psychopy import plugins
 plugins.activatePlugins()
 prefs.hardware['audioLib'] = 'ptb'
+prefs.hardware['audioLatencyMode'] = '3'
 from psychopy import sound, gui, visual, core, data, event, logging, clock, colors, layout, hardware
 from psychopy.tools import environmenttools
-from psychopy.constants import (
-    NOT_STARTED, STARTED, PLAYING, PAUSED, STOPPED, STOPPING, FINISHED, PRESSED, 
-    RELEASED, FOREVER, priority
-)
+from psychopy.constants import (NOT_STARTED, STARTED, PLAYING, PAUSED,
+                                STOPPED, FINISHED, PRESSED, RELEASED, FOREVER, priority)
 
 import numpy as np  # whole numpy lib is available, prepend 'np.'
 from numpy import (sin, cos, tan, log, log10, pi, average,
@@ -235,35 +234,6 @@ np.random.seed(random_seed)
 logging.info(f"✓ Random seed set to {random_seed}")
 
 # 10. 全局变量初始化用于后续的Routine
-## 10.1 block相关
-block_num = 0
-block_start_time = 0.0
-block_duration = 0.0
-
-## 10.2 trial相关
-trial_num = 0
-stimulus_type = ""
-
-## 10.3 trail_ready相关
-prepare_start_time = 0.0
-prepare_duration = 0.0
-
-# 10.4 action 相关
-action_start_time = 0.0
-action_end_time = 0.0
-action_duration = 0.0
-action_timer = None
-action_prompt = ""
-
-# trial_over 相关
-reset_start_time = 0.0
-reset_duration = 0.0
-reset_prompt = ""
-
-# block_over 相关
-rest_start_time = 0.0
-rest_duration = 0.0
-
 logging.info("=" * 50)
 logging.info("Upper Limb Movement Paradigm Initialized")
 logging.info(f"Task: {task_desc.get(str(task_type), 'unknown')}")
@@ -275,18 +245,14 @@ deviceManager = hardware.DeviceManager()
 # ensure that relative paths start from the same directory as this script
 _thisDir = os.path.dirname(os.path.abspath(__file__))
 # store info about the experiment session
-psychopyVersion = '2025.1.0'
+psychopyVersion = '2024.2.5'
 expName = 'fiBCIDecoder'  # from the Builder filename that created this script
-expVersion = ''
-# a list of functions to run when the experiment ends (starts off blank)
-runAtExit = []
 # information about this experiment
 expInfo = {
     'participant': f"{randint(0, 999999):06.0f}",
     'session': '001',
     'date|hid': data.getDateStr(),
     'expName|hid': expName,
-    'expVersion|hid': expVersion,
     'psychopyVersion|hid': psychopyVersion,
 }
 
@@ -308,9 +274,6 @@ if PILOTING:
         _fullScr = False
         # set window size
         _winSize = prefs.piloting['forcedWindowSize']
-    # replace default participant ID
-    if prefs.piloting['replaceParticipantID']:
-        expInfo['participant'] = 'pilot'
 
 def showExpInfoDlg(expInfo):
     """
@@ -367,9 +330,9 @@ def setupData(expInfo, dataDir=None):
     
     # an ExperimentHandler isn't essential but helps with data saving
     thisExp = data.ExperimentHandler(
-        name=expName, version=expVersion,
+        name=expName, version='',
         extraInfo=expInfo, runtimeInfo=None,
-        originPath='C:\\Users\\70706\\welink\\proj\\6-decoding\\FullyImplantedDecoder\\fiBCIDecoder_lastrun.py',
+        originPath='D:\\dev\\FullyImplantedDecoder\\fiBCIDecoder_lastrun.py',
         savePickle=True, saveWideText=True,
         dataFileName=dataDir + os.sep + filename, sortColumns='time'
     )
@@ -457,13 +420,9 @@ def setupWindow(expInfo=None, win=None):
             win._monitorFrameRate = win.getActualFrameRate(infoMsg='+')
         expInfo['frameRate'] = win._monitorFrameRate
     win.hideMessage()
-    if PILOTING:
-        # show a visual indicator if we're in piloting mode
-        if prefs.piloting['showPilotingIndicator']:
-            win.showPilotingIndicator()
-        # always show the mouse in piloting mode
-        if prefs.piloting['forceMouseVisible']:
-            win.mouseVisible = True
+    # show a visual indicator if we're in piloting mode
+    if PILOTING and prefs.piloting['showPilotingIndicator']:
+        win.showPilotingIndicator()
     
     return win
 
@@ -511,41 +470,31 @@ def setupDevices(expInfo, thisExp, win):
     deviceManager.addDevice(
         deviceName='br_sound',
         deviceClass='psychopy.hardware.speaker.SpeakerDevice',
-        index=-1,
-        resample='True',
-        latencyClass=1,
+        index=-1
     )
     # create speaker 'tr_sound'
     deviceManager.addDevice(
         deviceName='tr_sound',
         deviceClass='psychopy.hardware.speaker.SpeakerDevice',
-        index=-1,
-        resample='True',
-        latencyClass=1,
+        index=-1
     )
     # create speaker 'act_sound'
     deviceManager.addDevice(
         deviceName='act_sound',
         deviceClass='psychopy.hardware.speaker.SpeakerDevice',
-        index=-1,
-        resample='True',
-        latencyClass=1,
+        index=-1
     )
     # create speaker 'to_sound'
     deviceManager.addDevice(
         deviceName='to_sound',
         deviceClass='psychopy.hardware.speaker.SpeakerDevice',
-        index=-1,
-        resample='True',
-        latencyClass=1,
+        index=-1
     )
     # create speaker 'bo_sound'
     deviceManager.addDevice(
         deviceName='bo_sound',
         deviceClass='psychopy.hardware.speaker.SpeakerDevice',
-        index=-1,
-        resample='True',
-        latencyClass=1,
+        index=-1
     )
     if deviceManager.getDevice('key_resp') is None:
         # initialise key_resp
@@ -556,7 +505,7 @@ def setupDevices(expInfo, thisExp, win):
     # return True if completed successfully
     return True
 
-def pauseExperiment(thisExp, win=None, timers=[], currentRoutine=None):
+def pauseExperiment(thisExp, win=None, timers=[], playbackComponents=[]):
     """
     Pause this experiment, preventing the flow from advancing to the next routine until resumed.
     
@@ -569,8 +518,8 @@ def pauseExperiment(thisExp, win=None, timers=[], currentRoutine=None):
         Window for this experiment.
     timers : list, tuple
         List of timers to reset once pausing is finished.
-    currentRoutine : psychopy.data.Routine
-        Current Routine we are in at time of pausing, if any. This object tells PsychoPy what Components to pause/play/dispatch.
+    playbackComponents : list, tuple
+        List of any components with a `pause` method which need to be paused.
     """
     # if we are not paused, do nothing
     if thisExp.status != PAUSED:
@@ -579,9 +528,8 @@ def pauseExperiment(thisExp, win=None, timers=[], currentRoutine=None):
     # start a timer to figure out how long we're paused for
     pauseTimer = core.Clock()
     # pause any playback components
-    if currentRoutine is not None:
-        for comp in currentRoutine.getPlaybackComponents():
-            comp.pause()
+    for comp in playbackComponents:
+        comp.pause()
     # make sure we have a keyboard
     defaultKeyboard = deviceManager.getDevice('defaultKeyboard')
     if defaultKeyboard is None:
@@ -595,19 +543,14 @@ def pauseExperiment(thisExp, win=None, timers=[], currentRoutine=None):
         # check for quit (typically the Esc key)
         if defaultKeyboard.getKeys(keyList=['escape']):
             endExperiment(thisExp, win=win)
-        # dispatch messages on response components
-        if currentRoutine is not None:
-            for comp in currentRoutine.getDispatchComponents():
-                comp.device.dispatchMessages()
         # sleep 1ms so other threads can execute
         clock.time.sleep(0.001)
     # if stop was requested while paused, quit
     if thisExp.status == FINISHED:
         endExperiment(thisExp, win=win)
     # resume any playback components
-    if currentRoutine is not None:
-        for comp in currentRoutine.getPlaybackComponents():
-            comp.play()
+    for comp in playbackComponents:
+        comp.play()
     # reset any timers
     for timer in timers:
         timer.addTime(-pauseTimer.getTime())
@@ -725,6 +668,127 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     tr_sound.setVolume(1.0)
     
     # --- Initialize components for Routine "action" ---
+    # Run 'Begin Experiment' code from act_code
+    # 1. 导入在线解码与刺激控制模块
+    import os
+    import csv
+    import json
+    from datetime import datetime
+    from psychopy import core
+    
+    from src.data_streamer.data_streamer import DataStreamer
+    from src.decoder.online_inference.ml_decoder.ml_decoder import load_model
+    from src.welink_stimulator.stimulator_controller import (
+        StimulatorController,
+        StimulationParams,
+    )
+    
+    # 公共函数
+    def monotonic_time_s():
+        # 统一使用 PsychoPy 单调时钟
+        return float(core.monotonicClock.getTime())
+    
+    
+    def save_action_decode_logs(log_rows, csv_path):
+        # 保存单次 action 的完整解码日志
+        if not log_rows:
+            return
+    
+        os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+    
+        fieldnames = [
+            "participant",
+            "session",
+            "block_num",
+            "trial_num",
+            "action_start_time_s",
+            "action_end_time_s",
+            "time_in_action_s",
+            "data_received_time_s",
+            "data_shape",
+            "preprocess_time_ms",
+            "decode_time_ms",
+            "decode_result",
+            "confidence",
+            "command_sent",
+            "command_content",
+        ]
+    
+        with open(csv_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(log_rows)
+    
+    def flush_dc_buffer(dc, fs):
+        # 清空缓冲区
+        try:
+            if hasattr(dc, "getBufferTime"):
+                buffer_time_s = float(dc.getBufferTime())
+                buffer_points = max(0, int(buffer_time_s * fs))
+                if buffer_points > 0:
+                    dc.get_data(buffer_points)
+                    return buffer_points
+        except Exception as e:
+            print(f"flush_dc_buffer failed: {e}")
+    
+        return 0
+    
+    
+    # 2. 读取解码配置
+    with open(os.path.join(project_dir, "config", "decoder_config.json"), "r", encoding="utf-8") as f:
+        decoder_cfg = json.load(f)
+    
+    with open(os.path.join(project_dir, "config", "feature_config.json"), "r", encoding="utf-8") as f:
+        feature_cfg = json.load(f)
+    
+    # 3. 加载模型
+    model_path = os.path.join(project_dir, "pretrained_models", "ml_models", "fine_decoder.pkl")
+    model_bundle = load_model(model_path)
+    
+    # 4. 初始化刺激器
+    stimulator = None
+    stimulator_enabled = False
+    try:
+        with open(os.path.join(project_dir, "config", "upper_limb_movement_config.json"), "r", encoding="utf-8") as f:
+            stim_cfg = json.load(f)
+    
+        stim_port = stim_cfg.get("experiment", {}).get("stim_com_port", None)
+    
+        if stim_port:
+            stimulator = StimulatorController(
+                port=stim_port,
+                baudrate=115200,
+                timeout=1.0,
+                debug=False,
+            )
+            stimulator_enabled = stimulator.connect()
+    except Exception as e:
+        print(f"Stimulator init failed: {e}")
+        stimulator = None
+        stimulator_enabled = False
+    
+    # 6. 解码类别 -> 刺激参数映射
+    stim_param_map = {
+        0: None,
+        1: StimulationParams(channel="A", current_ma=1.0, pulse_width=2, duration_min=1),
+    }
+    
+    # action 解码日志目录
+    action_decode_log_dir = os.path.join(project_dir, "logs", "action_decode_logs")
+    os.makedirs(action_decode_log_dir, exist_ok=True)
+    
+    # 7. action routine 运行态变量
+    action_start_time_s = 0.0
+    action_end_time_s = 0.0
+    action_latest_payload = None
+    action_latest_result = None
+    action_latest_log = None
+    action_command_sent = 0
+    action_command_text = ""
+    action_decode_count = 0
+    action_log_cache = []
+    action_log_file_path = ""
+    
     act_movie = visual.MovieStim(
         win, name='act_movie',
         filename=None, movieLib='ffpyplayer',
@@ -907,8 +971,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             pauseExperiment(
                 thisExp=thisExp, 
                 win=win, 
-                timers=[routineTimer, globalClock], 
-                currentRoutine=init,
+                timers=[routineTimer], 
+                playbackComponents=[]
             )
             # skip the frame we paused on
             continue
@@ -969,9 +1033,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         thisSession.sendExperimentData()
     
     for thisBlock_loop in block_loop:
-        block_loop.status = STARTED
-        if hasattr(thisBlock_loop, 'status'):
-            thisBlock_loop.status = STARTED
         currentLoop = block_loop
         thisExp.timestampOnFlip(win, 'thisRow.t', format=globalClock.format)
         if thisSession is not None:
@@ -1018,11 +1079,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         frameN = -1
         
         # --- Run Routine "block_ready" ---
+        # if trial has changed, end Routine now
+        if isinstance(block_loop, data.TrialHandler2) and thisBlock_loop.thisN != block_loop.thisTrial.thisN:
+            continueRoutine = False
         block_ready.forceEnded = routineForceEnded = not continueRoutine
         while continueRoutine and routineTimer.getTime() < 8.0:
-            # if trial has changed, end Routine now
-            if hasattr(thisBlock_loop, 'status') and thisBlock_loop.status == STOPPING:
-                continueRoutine = False
             # get current time
             t = routineTimer.getTime()
             tThisFlip = win.getFutureFlipTime(clock=routineTimer)
@@ -1205,8 +1266,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 pauseExperiment(
                     thisExp=thisExp, 
                     win=win, 
-                    timers=[routineTimer, globalClock], 
-                    currentRoutine=block_ready,
+                    timers=[routineTimer], 
+                    playbackComponents=[br_sound]
                 )
                 # skip the frame we paused on
                 continue
@@ -1267,9 +1328,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             thisSession.sendExperimentData()
         
         for thisTrial_loop in trial_loop:
-            trial_loop.status = STARTED
-            if hasattr(thisTrial_loop, 'status'):
-                thisTrial_loop.status = STARTED
             currentLoop = trial_loop
             thisExp.timestampOnFlip(win, 'thisRow.t', format=globalClock.format)
             if thisSession is not None:
@@ -1317,11 +1375,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             frameN = -1
             
             # --- Run Routine "trial_ready" ---
+            # if trial has changed, end Routine now
+            if isinstance(trial_loop, data.TrialHandler2) and thisTrial_loop.thisN != trial_loop.thisTrial.thisN:
+                continueRoutine = False
             trial_ready.forceEnded = routineForceEnded = not continueRoutine
             while continueRoutine and routineTimer.getTime() < 3.0:
-                # if trial has changed, end Routine now
-                if hasattr(thisTrial_loop, 'status') and thisTrial_loop.status == STOPPING:
-                    continueRoutine = False
                 # get current time
                 t = routineTimer.getTime()
                 tThisFlip = win.getFutureFlipTime(clock=routineTimer)
@@ -1402,8 +1460,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     pauseExperiment(
                         thisExp=thisExp, 
                         win=win, 
-                        timers=[routineTimer, globalClock], 
-                        currentRoutine=trial_ready,
+                        timers=[routineTimer], 
+                        playbackComponents=[tr_sound]
                     )
                     # skip the frame we paused on
                     continue
@@ -1451,6 +1509,66 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             # Run 'Begin Routine' code from act_code
             act_movie_dir = os.path.join(video_dir, video_name)
             act_sound_dir = os.path.join(sound_dir, "开始.wav")
+            
+            
+            # 取最新的5s数据，并清空缓冲区
+            # 1. 首先重置本次 action 的状态
+            action_start_time_s = monotonic_time_s()
+            action_end_time_s = 0.0
+            action_now_s = 0.0
+            action_last_decode_submit_s = -1e9
+            action_decode_count = 0
+            action_next_decode_id = 1
+            action_log_cache = []
+            action_pending_log_by_id = {}
+            
+            # 本次 action 的独立日志文件
+            participant_id = expInfo.get("participant", "unknown")
+            session_id = expInfo.get("session", "001")
+            timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            
+            action_log_file_path = os.path.join(
+                action_decode_log_dir,
+                f"action_decode_p{participant_id}_s{session_id}_b{block_num}_t{trial_num}_{timestamp_str}.csv"
+            )
+            
+            # 2. 获取最近5s的数据
+            initial_decode_data = None
+            data_candidate = dc.get_data(window_points)
+            if data_candidate is not None and getattr(data_candidate, "size", 0) > 0:
+                if data_candidate.ndim == 2 and data_candidate.shape[1] >= window_points:
+                    initial_decode_data = data_candidate[:, -window_points:]
+                    break
+            
+            # 3. 清空缓冲区
+            flushed_points = flush_dc_buffer(dc, int(decoder_cfg["fs"]))
+            print(f"flushed buffer points: {flushed_points}")
+            
+            # 4. 启动两个线程
+            decoder_thread = DecoderThread(
+                fs=int(decoder_cfg["fs"]),
+                decoder_config=decoder_cfg,
+                feature_config=feature_cfg,
+                model_bundle=model_bundle,
+            )
+            decoder_thread.start()
+            
+            stim_thread = StimThread(
+                stimulator=stimulator if stimulator_enabled else None,
+            )
+            stim_thread.start()
+            
+            # 5. 把第一次拿到的数据进行解码
+            first_decode_id = action_next_decode_id
+            submit_ok = decoder_thread.submit(
+                decode_id=first_decode_id,
+                data=initial_decode_data,
+                timestamp_s=action_start_time_s,
+            )
+            if submit_ok:
+                action_last_decode_submit_s = action_start_time_s
+                action_next_decode_id += 1
+            
             act_movie.setMovie(act_movie_dir)
             act_sound.setSound(act_sound_dir, secs=3, hamming=True)
             act_sound.setVolume(1.0, log=False)
@@ -1476,17 +1594,102 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             frameN = -1
             
             # --- Run Routine "action" ---
+            # if trial has changed, end Routine now
+            if isinstance(trial_loop, data.TrialHandler2) and thisTrial_loop.thisN != trial_loop.thisTrial.thisN:
+                continueRoutine = False
             action.forceEnded = routineForceEnded = not continueRoutine
             while continueRoutine and routineTimer.getTime() < 10.0:
-                # if trial has changed, end Routine now
-                if hasattr(thisTrial_loop, 'status') and thisTrial_loop.status == STOPPING:
-                    continueRoutine = False
                 # get current time
                 t = routineTimer.getTime()
                 tThisFlip = win.getFutureFlipTime(clock=routineTimer)
                 tThisFlipGlobal = win.getFutureFlipTime(clock=None)
                 frameN = frameN + 1  # number of completed frames (so 0 is the first frame)
                 # update/draw components on each frame
+                # Run 'Each Frame' code from act_code
+                action_now_s = monotonic_time_s()
+                # 1. 判断时间是否超过100ms，如果超过，就获取新的5s窗口的数据
+                if (action_now_s - action_last_decode_submit_s) >= decode_interval_s:
+                    decode_data = dc.get_data(window_points)
+                    if decode_data is not None and getattr(decode_data, "size", 0) > 0:
+                        if decode_data.ndim == 2 and decode_data.shape[1] >= window_points:
+                            if not decoder_thread.is_busy():
+                                decode_id = action_next_decode_id
+                                # 准备新的数据的解码
+                                submit_ok = decoder_thread.submit(  
+                                    decode_id=decode_id,
+                                    data=decode_data[:, -window_points:],
+                                    timestamp_s=action_now_s,
+                                )
+                
+                                if submit_ok:
+                                    action_last_decode_submit_s = action_now_s
+                                    action_next_decode_id += 1
+                # 2.2 解码完成后返回结果
+                decode_payload = decoder_thread.consume_result()
+                if decode_payload is not None:
+                    action_decode_count += 1
+                    decode_id = decode_payload["decode_id"]
+                    decode_result = decode_payload["result"]
+                
+                    predicted_target = decode_result.get("predicted_target", None)
+                    decode_success = bool(decode_result.get("success", False))
+                
+                    ## 2.1 默认不发刺激
+                    should_stim = False
+                    command_label = ""
+                
+                    ## 2.2 判断是否要发送刺激
+                    if decode_success:
+                        if predicted_target == 1 or predicted_target == "1":
+                            if stimulator_enabled and stimulator is not None:
+                                if not stim_thread.is_busy():
+                                    should_stim = True
+                                    command_label = f"stim_target_{predicted_target}_{stim_duration_ms}ms"
+                
+                    ## 2.3 如果should_stim=False就不会发送，should_stim的Ture/False状态由线程是否busy决定
+                    stim_thread.submit(
+                        decode_id=decode_id,
+                        should_stim=should_stim,
+                        params=stim_param_map.get(predicted_target, None),
+                        duration_ms=stim_duration_ms,
+                        command_label=command_label,
+                    )
+                
+                    # 3. 结果记录
+                    log_row = {
+                        "decode_id": decode_id,
+                        "participant": expInfo.get("participant", "unknown"),
+                        "session": expInfo.get("session", "001"),
+                        "block_num": block_num,
+                        "trial_num": trial_num,
+                        "action_start_time_s": round(action_start_time_s, 6),
+                        "action_end_time_s": "",
+                        "time_in_action_s": round(action_now_s - action_start_time_s, 6),
+                        "data_received_time_s": decode_payload.get("data_received_time_s", ""),
+                        "data_shape": str(decode_payload.get("data_shape", "")),
+                        "preprocess_time_ms": decode_payload.get("preprocess_time_ms", ""),
+                        "decode_time_ms": decode_payload.get("decode_time_ms", ""),
+                        "decode_result": predicted_target,
+                        "confidence": decode_result.get("confidence", ""),
+                        "command_sent": 0,
+                        "command_content": "",
+                    }
+                
+                    action_log_cache.append(log_row)
+                    action_pending_log_by_id[decode_id] = len(action_log_cache) - 1
+                
+                # 4. 将输出的刺激的状态和内容也一起保存
+                stim_payload = stim_thread.consume_result()
+                if stim_payload is not None:
+                    decode_id = stim_payload.get("decode_id", None)
+                
+                    if decode_id in action_pending_log_by_id:
+                        row_idx = action_pending_log_by_id.pop(decode_id)
+                
+                        if 0 <= row_idx < len(action_log_cache):
+                            action_log_cache[row_idx]["command_sent"] = stim_payload.get("command_sent", 0)
+                            action_log_cache[row_idx]["command_content"] = stim_payload.get("command_content", "")
+                
                 
                 # *act_movie* updates
                 
@@ -1560,8 +1763,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     pauseExperiment(
                         thisExp=thisExp, 
                         win=win, 
-                        timers=[routineTimer, globalClock], 
-                        currentRoutine=action,
+                        timers=[routineTimer], 
+                        playbackComponents=[act_movie, act_sound]
                     )
                     # skip the frame we paused on
                     continue
@@ -1588,6 +1791,56 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             action.tStop = globalClock.getTime(format='float')
             action.tStopRefresh = tThisFlipGlobal
             thisExp.addData('action.stopped', action.tStop)
+            # Run 'End Routine' code from act_code
+            action_end_time_s = monotonic_time_s()
+            
+            #1. 停止后台线程
+            if decoder_thread is not None:
+                decoder_thread.stop()
+                if decoder_thread.is_alive():
+                    decoder_thread.join(timeout=1.0)
+            
+            if stim_thread is not None:
+                stim_thread.stop()
+                if stim_thread.is_alive():
+                    stim_thread.join(timeout=1.0)
+            
+            for row in action_log_cache:
+                row["action_end_time_s"] = round(action_end_time_s, 6)
+            
+            #2. 保存本次 action 的完整解码日志
+            try:
+                save_action_decode_logs(action_log_cache, action_log_file_path)
+            except Exception as e:
+                print(f"save_action_decode_logs failed: {e}")
+            
+            #3. 保存结果到psychopy的数据结果文件
+            thisExp.addData("action.decode_count", action_decode_count)
+            thisExp.addData("action.decode_log_file", action_log_file_path)
+            thisExp.addData("action.start_time_s", round(action_start_time_s, 6))
+            thisExp.addData("action.end_time_s", round(action_end_time_s, 6))
+            thisExp.addData("action.duration_s", round(action_end_time_s - action_start_time_s, 6))
+            
+            if len(action_log_cache) > 0:
+                last_row = action_log_cache[-1]
+                thisExp.addData("action.last_data_received_time_s", last_row.get("data_received_time_s", ""))
+                thisExp.addData("action.last_data_shape", last_row.get("data_shape", ""))
+                thisExp.addData("action.last_preprocess_time_ms", last_row.get("preprocess_time_ms", ""))
+                thisExp.addData("action.last_decode_time_ms", last_row.get("decode_time_ms", ""))
+                thisExp.addData("action.last_decode_result", last_row.get("decode_result", ""))
+                thisExp.addData("action.last_confidence", last_row.get("confidence", ""))
+                thisExp.addData("action.last_command_sent", last_row.get("command_sent", 0))
+                thisExp.addData("action.last_command_content", last_row.get("command_content", ""))
+            else:
+                thisExp.addData("action.last_data_received_time_s", "")
+                thisExp.addData("action.last_data_shape", "")
+                thisExp.addData("action.last_preprocess_time_ms", "")
+                thisExp.addData("action.last_decode_time_ms", "")
+                thisExp.addData("action.last_decode_result", "")
+                thisExp.addData("action.last_confidence", "")
+                thisExp.addData("action.last_command_sent", 0)
+                thisExp.addData("action.last_command_content", "")
+            
             act_movie.stop()  # ensure movie has stopped at end of Routine
             act_sound.pause()  # ensure sound has stopped at end of Routine
             # using non-slip timing so subtract the expected duration of this Routine (unless ended on request)
@@ -1635,11 +1888,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             frameN = -1
             
             # --- Run Routine "trial_over" ---
+            # if trial has changed, end Routine now
+            if isinstance(trial_loop, data.TrialHandler2) and thisTrial_loop.thisN != trial_loop.thisTrial.thisN:
+                continueRoutine = False
             trial_over.forceEnded = routineForceEnded = not continueRoutine
             while continueRoutine and routineTimer.getTime() < 5.0:
-                # if trial has changed, end Routine now
-                if hasattr(thisTrial_loop, 'status') and thisTrial_loop.status == STOPPING:
-                    continueRoutine = False
                 # get current time
                 t = routineTimer.getTime()
                 tThisFlip = win.getFutureFlipTime(clock=routineTimer)
@@ -1720,8 +1973,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     pauseExperiment(
                         thisExp=thisExp, 
                         win=win, 
-                        timers=[routineTimer, globalClock], 
-                        currentRoutine=trial_over,
+                        timers=[routineTimer], 
+                        playbackComponents=[to_sound]
                     )
                     # skip the frame we paused on
                     continue
@@ -1792,11 +2045,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             frameN = -1
             
             # --- Run Routine "inter_trial_interval" ---
+            # if trial has changed, end Routine now
+            if isinstance(trial_loop, data.TrialHandler2) and thisTrial_loop.thisN != trial_loop.thisTrial.thisN:
+                continueRoutine = False
             inter_trial_interval.forceEnded = routineForceEnded = not continueRoutine
             while continueRoutine:
-                # if trial has changed, end Routine now
-                if hasattr(thisTrial_loop, 'status') and thisTrial_loop.status == STOPPING:
-                    continueRoutine = False
                 # get current time
                 t = routineTimer.getTime()
                 tThisFlip = win.getFutureFlipTime(clock=routineTimer)
@@ -1849,8 +2102,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     pauseExperiment(
                         thisExp=thisExp, 
                         win=win, 
-                        timers=[routineTimer, globalClock], 
-                        currentRoutine=inter_trial_interval,
+                        timers=[routineTimer], 
+                        playbackComponents=[]
                     )
                     # skip the frame we paused on
                     continue
@@ -1879,23 +2132,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             thisExp.addData('inter_trial_interval.stopped', inter_trial_interval.tStop)
             # the Routine "inter_trial_interval" was not non-slip safe, so reset the non-slip timer
             routineTimer.reset()
-            # mark thisTrial_loop as finished
-            if hasattr(thisTrial_loop, 'status'):
-                thisTrial_loop.status = FINISHED
-            # if awaiting a pause, pause now
-            if trial_loop.status == PAUSED:
-                thisExp.status = PAUSED
-                pauseExperiment(
-                    thisExp=thisExp, 
-                    win=win, 
-                    timers=[globalClock], 
-                )
-                # once done pausing, restore running status
-                trial_loop.status = STARTED
             thisExp.nextEntry()
             
         # completed trial_repeats repeats of 'trial_loop'
-        trial_loop.status = FINISHED
         
         if thisSession is not None:
             # if running in a Session with a Liaison client, send data up to now
@@ -1939,11 +2178,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         frameN = -1
         
         # --- Run Routine "block_over" ---
+        # if trial has changed, end Routine now
+        if isinstance(block_loop, data.TrialHandler2) and thisBlock_loop.thisN != block_loop.thisTrial.thisN:
+            continueRoutine = False
         block_over.forceEnded = routineForceEnded = not continueRoutine
         while continueRoutine and routineTimer.getTime() < 5.0:
-            # if trial has changed, end Routine now
-            if hasattr(thisBlock_loop, 'status') and thisBlock_loop.status == STOPPING:
-                continueRoutine = False
             # get current time
             t = routineTimer.getTime()
             tThisFlip = win.getFutureFlipTime(clock=routineTimer)
@@ -2024,8 +2263,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 pauseExperiment(
                     thisExp=thisExp, 
                     win=win, 
-                    timers=[routineTimer, globalClock], 
-                    currentRoutine=block_over,
+                    timers=[routineTimer], 
+                    playbackComponents=[bo_sound]
                 )
                 # skip the frame we paused on
                 continue
@@ -2060,23 +2299,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             routineTimer.reset()
         else:
             routineTimer.addTime(-5.000000)
-        # mark thisBlock_loop as finished
-        if hasattr(thisBlock_loop, 'status'):
-            thisBlock_loop.status = FINISHED
-        # if awaiting a pause, pause now
-        if block_loop.status == PAUSED:
-            thisExp.status = PAUSED
-            pauseExperiment(
-                thisExp=thisExp, 
-                win=win, 
-                timers=[globalClock], 
-            )
-            # once done pausing, restore running status
-            block_loop.status = STARTED
         thisExp.nextEntry()
         
     # completed block_repeats repeats of 'block_loop'
-    block_loop.status = FINISHED
     
     if thisSession is not None:
         # if running in a Session with a Liaison client, send data up to now
@@ -2212,8 +2437,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             pauseExperiment(
                 thisExp=thisExp, 
                 win=win, 
-                timers=[routineTimer, globalClock], 
-                currentRoutine=finish,
+                timers=[routineTimer], 
+                playbackComponents=[]
             )
             # skip the frame we paused on
             continue
@@ -2257,6 +2482,14 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     thisExp.nextEntry()
     # Run 'End Experiment' code from init_code
     cleanup_all_resources()
+    # Run 'End Experiment' code from act_code
+    # 4. 关闭刺激器
+    try:
+        if stimulator is not None:
+            stimulator.disconnect()
+    except Exception as e:
+        print(f"stimulator.disconnect failed: {e}")
+    
     
     # mark experiment as finished
     endExperiment(thisExp, win=win)
@@ -2302,9 +2535,6 @@ def endExperiment(thisExp, win=None):
     logging.console.setLevel(logging.WARNING)
     # mark experiment handler as finished
     thisExp.status = FINISHED
-    # run any 'at exit' functions
-    for fcn in runAtExit:
-        fcn()
     logging.flush()
 
 
