@@ -1,2 +1,2 @@
-block_order,block_stimuli,block_dir
-1,保持\n张开手掌,D:\dev\paradigm_dev\resources\audios\upper_limb_movement\回合开始_请保持张开手掌的姿势.wav
+block_order,block_stimuli,block_audio_name
+1,保持\n张开手掌,回合开始_请保持张开手掌的姿势.wav
