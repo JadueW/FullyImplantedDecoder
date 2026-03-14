@@ -36,10 +36,10 @@
 		"task_desc":{"0":"粗大","1":"精细"},
 		"task_type":0,
         "random_seed": 42,
-		"sound_dir": "C:\\Users\\70706\\welink\\proj\\6-decoding\\FullyImplantedDecoder\\resources\\audios\\upper_limb_movement",
-		"video_dir": "C:\\Users\\70706\\welink\\proj\\6-decoding\\FullyImplantedDecoder\\resources\\videos\\upperlimb",
+		"sound_dir": "D:\\dev\\FullyImplantedDecoder\\resources\\audios\\upper_limb_movement",
+		"video_dir": "D:\\dev\\FullyImplantedDecoder\\resources\\videos\\upperlimb",
         "video_direction":"right",
-		"conditions":"C:\\Users\\70706\\welink\\proj\\6-decoding\\FullyImplantedDecoder\\resources\\conditions\\upper_limb_movement\\condition.csv",
-        "block_conditions": "C:\\Users\\70706\\welink\\proj\\6-decoding\\FullyImplantedDecoder\\resources\\conditions\\upper_limb_movement\\block_condition.csv"
+		"conditions":"D:\\dev\\FullyImplantedDecoder\\resources\\conditions\\upper_limb_movement\\condition.csv",
+        "block_conditions": "D:\\dev\\FullyImplantedDecoder\\resources\\conditions\\upper_limb_movement\\block_condition.csv"
     }
 }

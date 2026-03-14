@@ -4,7 +4,7 @@ import os
 import json
 import sys
 
-import peripheral.mvsdk as mvsdk
+import src.peripheral.mvsdk as mvsdk
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))

@@ -6,10 +6,10 @@ import json
 import wave
 import pyaudio
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
+# current_dir = os.path.dirname(os.path.abspath(__file__))
+# project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
+# if project_root not in sys.path:
+#     sys.path.insert(0, project_root)
 
 
 def read_audio_config(device="audio", config_file_path=None):
@@ -29,7 +29,7 @@ def read_audio_config(device="audio", config_file_path=None):
 
 class AudioConfig:
     # 读取配置文件
-    config_file = os.path.join(project_root, r"config\upper_limb_movement_config.json")
+    config_file = os.path.join( r"config\upper_limb_movement_config.json")
     # 获取实验配置
     audio_config = read_audio_config(device="audio", config_file_path=config_file)
 
