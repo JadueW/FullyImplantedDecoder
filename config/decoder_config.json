@@ -1,5 +1,5 @@
 {
-  "fs": 500.0,
+  "fs": 2000.0,
   "class_labels": ["rest", "task"],
   "frequency_bands": {
     "delta": [1, 4],
