@@ -70,8 +70,8 @@ def preprocess_data(data, fs, preprocess_config):
     total_sos = _build_filter_sos(fs, preprocess_config)
     filtered = sosfiltfilt(total_sos, data, axis=-1)
 
-    if preprocess_config.get('use_car', False):
-        filtered = common_average_reference(filtered)
+    # if preprocess_config.get('use_car', False):
+    #     filtered = common_average_reference(filtered)
 
     return filtered
 

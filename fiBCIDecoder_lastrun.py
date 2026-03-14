@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2024.2.5),
-    on 三月 14, 2026, at 16:59
+    on 三月 14, 2026, at 17:39
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -202,7 +202,7 @@ try:
         host,
         port,
         4,
-        500
+        2000
     )
     # 启动后台数据缓存
     dc.connect()
@@ -1812,41 +1812,19 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             action.tStopRefresh = tThisFlipGlobal
             thisExp.addData('action.stopped', action.tStop)
             # Run 'End Routine' code from act_code
+            # action 结束时间
             action_end_time_s = monotonic_time_s()
+            for row in action_log_cache:
+                row["action_end_time_s"] = round(action_end_time_s, 6)
             
-            # 保存本次 action 的完整解码日志
+            
+            # 保存结果
             try:
                 save_action_decode_logs(action_log_cache, action_log_file_path)
             except Exception as e:
                 print(f"save_action_decode_logs failed: {e}")
             
-            #3. 保存结果到psychopy的数据结果文件
-            #thisExp.addData("action.decode_count", action_decode_count)
-            #thisExp.addData("action.decode_log_file", action_log_file_path)
-            #thisExp.addData("action.start_time_s", round(action_start_time_s, 6))
-            #thisExp.addData("action.end_time_s", round(action_end_time_s, 6))
-            #thisExp.addData("action.duration_s", round(action_end_time_s - action_start_time_s, 6))
-            #
-            #if len(action_log_cache) > 0:
-            #    last_row = action_log_cache[-1]
-            #    thisExp.addData("action.last_data_received_time_s", last_row.get("data_received_time_s", ""))
-            #    thisExp.addData("action.last_data_shape", last_row.get("data_shape", ""))
-            #    thisExp.addData("action.last_preprocess_time_ms", last_row.get("preprocess_time_ms", ""))
-            #    thisExp.addData("action.last_decode_time_ms", last_row.get("decode_time_ms", ""))
-            #    thisExp.addData("action.last_decode_result", last_row.get("decode_result", ""))
-            #    thisExp.addData("action.last_confidence", last_row.get("confidence", ""))
-            #    thisExp.addData("action.last_command_sent", last_row.get("command_sent", 0))
-            #    thisExp.addData("action.last_command_content", last_row.get("command_content", ""))
-            #else:
-            #    thisExp.addData("action.last_data_received_time_s", "")
-            #    thisExp.addData("action.last_data_shape", "")
-            #    thisExp.addData("action.last_preprocess_time_ms", "")
-            #    thisExp.addData("action.last_decode_time_ms", "")
-            #    thisExp.addData("action.last_decode_result", "")
-            #    thisExp.addData("action.last_confidence", "")
-            #    thisExp.addData("action.last_command_sent", 0)
-            #    thisExp.addData("action.last_command_content", "")
-            #
+            
             act_movie.stop()  # ensure movie has stopped at end of Routine
             act_sound.pause()  # ensure sound has stopped at end of Routine
             # using non-slip timing so subtract the expected duration of this Routine (unless ended on request)
