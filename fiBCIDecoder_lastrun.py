@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2024.2.5),
-    on 三月 13, 2026, at 18:20
+    on 三月 14, 2026, at 11:04
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -789,6 +789,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     action_log_cache = []
     action_log_file_path = ""
     
+    # 8. 配置参数
+    decode_interval_s = 0.1 # 100ms的编码时间间隔
+    decode_window_s = 5.0 # 每次5s的数据时间窗
+    stim_duration_ms = int(config.get("experiment", {}).get("stim_duration_ms", 500)) # 刺激持续时间500ms
+    window_points = int(decode_window_s * decoder_cfg["fs"]) # 采样点数 = 时间窗 * 采样率
     act_movie = visual.MovieStim(
         win, name='act_movie',
         filename=None, movieLib='ffpyplayer',
@@ -1610,21 +1615,20 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 # 1. 判断时间是否超过100ms，如果超过，就获取新的5s窗口的数据
                 if (action_now_s - action_last_decode_submit_s) >= decode_interval_s:
                     decode_data = dc.get_data(window_points)
-                    if decode_data is not None and getattr(decode_data, "size", 0) > 0:
-                        if decode_data.ndim == 2 and decode_data.shape[1] >= window_points:
-                            if not decoder_thread.is_busy():
-                                decode_id = action_next_decode_id
-                                # 准备新的数据的解码
-                                submit_ok = decoder_thread.submit(  
-                                    decode_id=decode_id,
-                                    data=decode_data[:, -window_points:],
-                                    timestamp_s=action_now_s,
-                                )
+                    if not decoder_thread.is_busy():
+                        decode_id = action_next_decode_id
+                        # submit新获取的数据
+                        submit_ok = decoder_thread.submit(  
+                            decode_id=decode_id,
+                            data=decode_data[:, -window_points:],
+                            timestamp_s=action_now_s,
+                        )
                 
-                                if submit_ok:
-                                    action_last_decode_submit_s = action_now_s
-                                    action_next_decode_id += 1
-                # 2.2 解码完成后返回结果
+                        if submit_ok:
+                            action_last_decode_submit_s = action_now_s
+                            action_next_decode_id += 1
+                
+                # 2 解码完成后返回结果
                 decode_payload = decoder_thread.consume_result()
                 if decode_payload is not None:
                     action_decode_count += 1
@@ -1638,9 +1642,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     should_stim = False
                     command_label = ""
                 
-                    ## 2.2 判断是否要发送刺激
+                    ## 2.2 判断是否要发送刺激(任务态 & 存在刺激器 & 刺激器可用需要同时满足)
                     if decode_success:
-                        if predicted_target == 1 or predicted_target == "1":
+                        if predicted_target == 1:
                             if stimulator_enabled and stimulator is not None:
                                 if not stim_thread.is_busy():
                                     should_stim = True
@@ -1794,7 +1798,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             # Run 'End Routine' code from act_code
             action_end_time_s = monotonic_time_s()
             
-            #1. 停止后台线程
+            # 1. 停止后台线程
             if decoder_thread is not None:
                 decoder_thread.stop()
                 if decoder_thread.is_alive():
@@ -1808,39 +1812,39 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             for row in action_log_cache:
                 row["action_end_time_s"] = round(action_end_time_s, 6)
             
-            #2. 保存本次 action 的完整解码日志
+            # 2. 保存本次 action 的完整解码日志
             try:
                 save_action_decode_logs(action_log_cache, action_log_file_path)
             except Exception as e:
                 print(f"save_action_decode_logs failed: {e}")
             
             #3. 保存结果到psychopy的数据结果文件
-            thisExp.addData("action.decode_count", action_decode_count)
-            thisExp.addData("action.decode_log_file", action_log_file_path)
-            thisExp.addData("action.start_time_s", round(action_start_time_s, 6))
-            thisExp.addData("action.end_time_s", round(action_end_time_s, 6))
-            thisExp.addData("action.duration_s", round(action_end_time_s - action_start_time_s, 6))
-            
-            if len(action_log_cache) > 0:
-                last_row = action_log_cache[-1]
-                thisExp.addData("action.last_data_received_time_s", last_row.get("data_received_time_s", ""))
-                thisExp.addData("action.last_data_shape", last_row.get("data_shape", ""))
-                thisExp.addData("action.last_preprocess_time_ms", last_row.get("preprocess_time_ms", ""))
-                thisExp.addData("action.last_decode_time_ms", last_row.get("decode_time_ms", ""))
-                thisExp.addData("action.last_decode_result", last_row.get("decode_result", ""))
-                thisExp.addData("action.last_confidence", last_row.get("confidence", ""))
-                thisExp.addData("action.last_command_sent", last_row.get("command_sent", 0))
-                thisExp.addData("action.last_command_content", last_row.get("command_content", ""))
-            else:
-                thisExp.addData("action.last_data_received_time_s", "")
-                thisExp.addData("action.last_data_shape", "")
-                thisExp.addData("action.last_preprocess_time_ms", "")
-                thisExp.addData("action.last_decode_time_ms", "")
-                thisExp.addData("action.last_decode_result", "")
-                thisExp.addData("action.last_confidence", "")
-                thisExp.addData("action.last_command_sent", 0)
-                thisExp.addData("action.last_command_content", "")
-            
+            #thisExp.addData("action.decode_count", action_decode_count)
+            #thisExp.addData("action.decode_log_file", action_log_file_path)
+            #thisExp.addData("action.start_time_s", round(action_start_time_s, 6))
+            #thisExp.addData("action.end_time_s", round(action_end_time_s, 6))
+            #thisExp.addData("action.duration_s", round(action_end_time_s - action_start_time_s, 6))
+            #
+            #if len(action_log_cache) > 0:
+            #    last_row = action_log_cache[-1]
+            #    thisExp.addData("action.last_data_received_time_s", last_row.get("data_received_time_s", ""))
+            #    thisExp.addData("action.last_data_shape", last_row.get("data_shape", ""))
+            #    thisExp.addData("action.last_preprocess_time_ms", last_row.get("preprocess_time_ms", ""))
+            #    thisExp.addData("action.last_decode_time_ms", last_row.get("decode_time_ms", ""))
+            #    thisExp.addData("action.last_decode_result", last_row.get("decode_result", ""))
+            #    thisExp.addData("action.last_confidence", last_row.get("confidence", ""))
+            #    thisExp.addData("action.last_command_sent", last_row.get("command_sent", 0))
+            #    thisExp.addData("action.last_command_content", last_row.get("command_content", ""))
+            #else:
+            #    thisExp.addData("action.last_data_received_time_s", "")
+            #    thisExp.addData("action.last_data_shape", "")
+            #    thisExp.addData("action.last_preprocess_time_ms", "")
+            #    thisExp.addData("action.last_decode_time_ms", "")
+            #    thisExp.addData("action.last_decode_result", "")
+            #    thisExp.addData("action.last_confidence", "")
+            #    thisExp.addData("action.last_command_sent", 0)
+            #    thisExp.addData("action.last_command_content", "")
+            #
             act_movie.stop()  # ensure movie has stopped at end of Routine
             act_sound.pause()  # ensure sound has stopped at end of Routine
             # using non-slip timing so subtract the expected duration of this Routine (unless ended on request)
@@ -2483,7 +2487,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     # Run 'End Experiment' code from init_code
     cleanup_all_resources()
     # Run 'End Experiment' code from act_code
-    # 4. 关闭刺激器
+    # 关闭刺激器
     try:
         if stimulator is not None:
             stimulator.disconnect()
