@@ -54,7 +54,7 @@ class DecoderThread(threading.Thread):
         except queue.Empty:
             return None
 
-    def stop(self):
+    def decode_stop(self):
         self._stop_event.set()
 
     def run(self):
@@ -164,7 +164,7 @@ class StimThread(threading.Thread):
         except queue.Empty:
             return None
 
-    def stop(self):
+    def stim_stop(self):
         self._stop_event.set()
         try:
             if self.stimulator is not None:
