@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2024.2.5),
-    on 三月 14, 2026, at 11:04
+    on 三月 14, 2026, at 16:59
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -38,11 +38,10 @@ import sys
 import os
 import json
 import warnings
+import csv
+from datetime import datetime
+import time
 from psychopy import logging, core
-
-project_dir = os.path.dirname(os.path.abspath(__file__))
-if project_dir not in sys.path:
-    sys.path.insert(0, project_dir)
 
 # 1. 导入项目模块
 from src.transmission.trans_control.dataController import DataController
@@ -56,10 +55,53 @@ from src.peripheral.audio.AudioThreadRecord import (
     start_audio_thread,
     exit_audio_thread
 )
+
+from src.data_streamer.data_streamer import DecoderThread,StimThread
+from src.decoder.online_inference.ml_decoder.ml_decoder import load_model
+from src.welink_stimulator.stimulator_controller import (
+    StimulatorController,
+    StimulationParams,
+)
+
 from src.utils.exit_handler import patch_core_quit, register_cleanup_function
 
+# 公共函数
+def monotonic_time_s():
+    # 统一使用 PsychoPy 单调时钟
+    return float(core.monotonicClock.getTime())
+
+
+def save_action_decode_logs(log_rows, csv_path):
+    # 保存单次 action 的完整解码日志
+    if not log_rows:
+        return
+
+    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+
+    fieldnames = [
+        "decode_id",
+        "participant",
+        "session",
+        "action_start_time_s",
+        "action_end_time_s",
+        "time_in_action_s",
+        "data_received_time_s",
+        "data_shape",
+        "preprocess_time_ms",
+        "decode_time_ms",
+        "decode_result",
+        "confidence",
+        "command_sent",
+        "command_content",
+    ]
+
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(log_rows)
+
 # 2. 读取配置文件
-config_path = os.path.join(project_dir, 'config', 'upper_limb_movement_config.json')
+config_path = os.path.join('./config', 'upper_limb_movement_config.json')
 
 try:
     with open(config_path, 'r', encoding='utf-8') as f:
@@ -70,6 +112,18 @@ except Exception as e:
     config = {}
     # 使用默认值
     warnings.warn("Using default configuration values")
+
+## 2.1 获取decoder和stim配置
+with open(os.path.join("./config", "decoder_config.json"), "r", encoding="utf-8") as f:
+    decoder_cfg = json.load(f)
+
+with open(os.path.join("./config", "feature_config.json"), "r", encoding="utf-8") as f:
+    feature_cfg = json.load(f)
+    
+## 2.2 加载模型
+model_path = os.path.join("./pretrained_models", "ml_models", "fine_decoder.pkl")
+model_bundle = load_model(model_path)
+print(f"模型加载成功，model = {model_bundle['model']}")
 
 # 3. 获取配置参数
 ## 3.1 TCP 连接
@@ -151,8 +205,11 @@ try:
         500
     )
     # 启动后台数据缓存
-#    dc.connect()
-#    dc.start()
+    dc.connect()
+    dc.start()
+    
+    dc.setBufferSize(10)
+    
     logging.info("✓ DataController initialized and started")
 except Exception as e:
     logging.error(f"✗ DataController initialization failed: {e}")
@@ -184,8 +241,44 @@ if audio_connected_status:
         logging.error(f"✗ Audio initialization failed: {e}")
         warnings.warn(f"Could not start audio recording: {e}")
 
+# 7. 初始化刺激器
+stimulator = None
+stimulator_enabled = False
+try:
+    with open(os.path.join("config", "upper_limb_movement_config.json"), "r", encoding="utf-8") as f:
+        stim_cfg = json.load(f)
 
-# 7. 注册清理函数
+    stim_port = stim_cfg.get("experiment", {}).get("stim_com_port", None)
+
+    if stim_port:
+        stimulator = StimulatorController(
+            port=stim_port,
+            baudrate=115200,
+            timeout=1.0,
+            debug=False,
+        )
+        stimulator_enabled = stimulator.connect()
+except Exception as e:
+    print(f"Stimulator init failed: {e}")
+    stimulator = None
+    stimulator_enabled = False
+
+# 8. 初始化decoder线程
+decoder_thread = None
+decoder_thread = DecoderThread(
+    fs=int(decoder_cfg["fs"]),
+    decoder_cfg=decoder_cfg,
+    feature_cfg=feature_cfg,
+    model_bundle=model_bundle,
+)
+
+# 9. 初始化stim线程
+stim_thread = None
+stim_thread = StimThread(
+    stimulator=stimulator if stimulator_enabled else None,
+)
+
+# 10. 注册清理函数
 def cleanup_all_resources():
     logging.info("=" * 50)
     logging.info("Cleaning up resources...")
@@ -213,19 +306,44 @@ def cleanup_all_resources():
             logging.info("✓ Camera recording stopped")
         except Exception as e:
             logging.error(f"✗ Error stopping cameras: {e}")
-
+            
+    # 4. 停止解码
+    if decoder_thread:
+        try:
+           decoder_thread.decode_stop()
+           logging.info("✓ decoder_thread stopped")
+        except Exception as e:
+           logging.error(f"✗ Error stopping decoder_thread: {e}")
+     
+    # 5. 停止刺激
+    if stim_thread:
+        try:
+            stim_thread.stim_stop()
+            logging.info("√ stim_thread stopped")
+        except Exception as e:
+            logging.error(f"✗ Error stopping stim_thread: {e}")
+            
+       
+    # 6. 关闭刺激器外设
+    if stimulator:
+        try:
+            stimulator.disconnect()
+            logging.info("√ stimulator stopped")
+        except Exception as e:
+            logging.error(f"✗ Error stopping stimulator: {e}")
+       
     logging.info("=" * 50)
     logging.info("All resources cleaned up")
 
 
-## 7.1 使用上面自定义的清理函数
+## 10.1 使用上面自定义的清理函数
 register_cleanup_function(cleanup_all_resources)
 
-# 8. 打补丁到 PsychoPy 的 core.quit()
+# 11. 打补丁到 PsychoPy 的 core.quit()
 patch_core_quit()
 logging.info("✓ Cleanup handlers registered and patched")
 
-# 9. 设置随机种子
+# 12. 设置随机种子
 import random
 import numpy as np
 
@@ -238,7 +356,32 @@ logging.info("=" * 50)
 logging.info("Upper Limb Movement Paradigm Initialized")
 logging.info(f"Task: {task_desc.get(str(task_type), 'unknown')}")
 logging.info("=" * 50)
+action_decode_log_dir = os.path.join("./logs", "action_decode_logs")
+os.makedirs(action_decode_log_dir, exist_ok=True)
 
+# 11. action routine 运行变量
+action_start_time_s = 0.0
+action_end_time_s = 0.0
+action_latest_payload = None
+action_latest_result = None
+action_latest_log = None
+action_command_sent = 0
+action_command_text = ""
+action_decode_count = 0
+action_log_cache = []
+action_log_file_path = ""
+
+# 12. 解码相关的配置参数
+decode_interval_s = 0.1 # 100ms的编码时间间隔
+decode_window_s = 5.0 # 每次5s的数据时间窗
+stim_duration_ms = int(config.get("experiment", {}).get("stim_duration_ms", 500)) # 刺激持续时间500ms
+window_points = int(decode_window_s * decoder_cfg["fs"]) # 采样点数 = 时间窗 * 采样率
+
+# 12. 解码类别 -> 刺激参数映射
+stim_param_map = {
+    0: None,
+    1: StimulationParams(channel="A", current_ma=1.0, pulse_width=2, duration_min=1),
+}
 # --- Setup global variables (available in all functions) ---
 # create a device manager to handle hardware (keyboards, mice, mirophones, speakers, etc.)
 deviceManager = hardware.DeviceManager()
@@ -604,6 +747,12 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     # Start Code - component code to be run after the window creation
     
     # --- Initialize components for Routine "init" ---
+    # Run 'Begin Experiment' code from init_code
+    # 启动两个线程
+    decoder_thread.start()
+    stim_thread.start()
+    print("decoder_thread启动成功！")
+    print("stim_thread启动成功！")
     init_text = visual.TextStim(win=win, name='init_text',
         text='+',
         font='Arial',
@@ -668,132 +817,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     tr_sound.setVolume(1.0)
     
     # --- Initialize components for Routine "action" ---
-    # Run 'Begin Experiment' code from act_code
-    # 1. 导入在线解码与刺激控制模块
-    import os
-    import csv
-    import json
-    from datetime import datetime
-    from psychopy import core
-    
-    from src.data_streamer.data_streamer import DataStreamer
-    from src.decoder.online_inference.ml_decoder.ml_decoder import load_model
-    from src.welink_stimulator.stimulator_controller import (
-        StimulatorController,
-        StimulationParams,
-    )
-    
-    # 公共函数
-    def monotonic_time_s():
-        # 统一使用 PsychoPy 单调时钟
-        return float(core.monotonicClock.getTime())
-    
-    
-    def save_action_decode_logs(log_rows, csv_path):
-        # 保存单次 action 的完整解码日志
-        if not log_rows:
-            return
-    
-        os.makedirs(os.path.dirname(csv_path), exist_ok=True)
-    
-        fieldnames = [
-            "participant",
-            "session",
-            "block_num",
-            "trial_num",
-            "action_start_time_s",
-            "action_end_time_s",
-            "time_in_action_s",
-            "data_received_time_s",
-            "data_shape",
-            "preprocess_time_ms",
-            "decode_time_ms",
-            "decode_result",
-            "confidence",
-            "command_sent",
-            "command_content",
-        ]
-    
-        with open(csv_path, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(log_rows)
-    
-    def flush_dc_buffer(dc, fs):
-        # 清空缓冲区
-        try:
-            if hasattr(dc, "getBufferTime"):
-                buffer_time_s = float(dc.getBufferTime())
-                buffer_points = max(0, int(buffer_time_s * fs))
-                if buffer_points > 0:
-                    dc.get_data(buffer_points)
-                    return buffer_points
-        except Exception as e:
-            print(f"flush_dc_buffer failed: {e}")
-    
-        return 0
-    
-    
-    # 2. 读取解码配置
-    with open(os.path.join(project_dir, "config", "decoder_config.json"), "r", encoding="utf-8") as f:
-        decoder_cfg = json.load(f)
-    
-    with open(os.path.join(project_dir, "config", "feature_config.json"), "r", encoding="utf-8") as f:
-        feature_cfg = json.load(f)
-    
-    # 3. 加载模型
-    model_path = os.path.join(project_dir, "pretrained_models", "ml_models", "fine_decoder.pkl")
-    model_bundle = load_model(model_path)
-    
-    # 4. 初始化刺激器
-    stimulator = None
-    stimulator_enabled = False
-    try:
-        with open(os.path.join(project_dir, "config", "upper_limb_movement_config.json"), "r", encoding="utf-8") as f:
-            stim_cfg = json.load(f)
-    
-        stim_port = stim_cfg.get("experiment", {}).get("stim_com_port", None)
-    
-        if stim_port:
-            stimulator = StimulatorController(
-                port=stim_port,
-                baudrate=115200,
-                timeout=1.0,
-                debug=False,
-            )
-            stimulator_enabled = stimulator.connect()
-    except Exception as e:
-        print(f"Stimulator init failed: {e}")
-        stimulator = None
-        stimulator_enabled = False
-    
-    # 6. 解码类别 -> 刺激参数映射
-    stim_param_map = {
-        0: None,
-        1: StimulationParams(channel="A", current_ma=1.0, pulse_width=2, duration_min=1),
-    }
-    
-    # action 解码日志目录
-    action_decode_log_dir = os.path.join(project_dir, "logs", "action_decode_logs")
-    os.makedirs(action_decode_log_dir, exist_ok=True)
-    
-    # 7. action routine 运行态变量
-    action_start_time_s = 0.0
-    action_end_time_s = 0.0
-    action_latest_payload = None
-    action_latest_result = None
-    action_latest_log = None
-    action_command_sent = 0
-    action_command_text = ""
-    action_decode_count = 0
-    action_log_cache = []
-    action_log_file_path = ""
-    
-    # 8. 配置参数
-    decode_interval_s = 0.1 # 100ms的编码时间间隔
-    decode_window_s = 5.0 # 每次5s的数据时间窗
-    stim_duration_ms = int(config.get("experiment", {}).get("stim_duration_ms", 500)) # 刺激持续时间500ms
-    window_points = int(decode_window_s * decoder_cfg["fs"]) # 采样点数 = 时间窗 * 采样率
     act_movie = visual.MovieStim(
         win, name='act_movie',
         filename=None, movieLib='ffpyplayer',
@@ -1515,9 +1538,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             act_movie_dir = os.path.join(video_dir, video_name)
             act_sound_dir = os.path.join(sound_dir, "开始.wav")
             
-            
-            # 取最新的5s数据，并清空缓冲区
-            # 1. 首先重置本次 action 的状态
+            # 1. 重置本次 action 状态
             action_start_time_s = monotonic_time_s()
             action_end_time_s = 0.0
             action_now_s = 0.0
@@ -1527,49 +1548,33 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             action_log_cache = []
             action_pending_log_by_id = {}
             
-            # 本次 action 的独立日志文件
+            # 2. 基本参数
+            fs = int(decoder_cfg["fs"])
+            window_points = int(5 * fs)                 # 5秒窗
+            step_points = int(decode_interval_s * fs)   # 100ms新数据
+            
+            # 3. 本次 action 的日志文件
             participant_id = expInfo.get("participant", "unknown")
             session_id = expInfo.get("session", "001")
             timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
             
             action_log_file_path = os.path.join(
                 action_decode_log_dir,
-                f"action_decode_p{participant_id}_s{session_id}_b{block_num}_t{trial_num}_{timestamp_str}.csv"
+                f"action_decode_p{participant_id}_s{session_id}_{timestamp_str}.csv"
             )
             
-            # 2. 获取最近5s的数据
-            initial_decode_data = None
-            data_candidate = dc.get_data(window_points)
-            if data_candidate is not None and getattr(data_candidate, "size", 0) > 0:
-                if data_candidate.ndim == 2 and data_candidate.shape[1] >= window_points:
-                    initial_decode_data = data_candidate[:, -window_points:]
-                    break
+            # 4. 拿到最近5秒数据
+            action_decode_window = dc.get_data(window_points)
+            print(f"initial_decode_window.shape = {action_decode_window.shape}")
             
-            # 3. 清空缓冲区
-            flushed_points = flush_dc_buffer(dc, int(decoder_cfg["fs"]))
-            print(f"flushed buffer points: {flushed_points}")
-            
-            # 4. 启动两个线程
-            decoder_thread = DecoderThread(
-                fs=int(decoder_cfg["fs"]),
-                decoder_config=decoder_cfg,
-                feature_config=feature_cfg,
-                model_bundle=model_bundle,
-            )
-            decoder_thread.start()
-            
-            stim_thread = StimThread(
-                stimulator=stimulator if stimulator_enabled else None,
-            )
-            stim_thread.start()
-            
-            # 5. 把第一次拿到的数据进行解码
+            # 5. 提交第一次完整5秒窗做解码
             first_decode_id = action_next_decode_id
             submit_ok = decoder_thread.submit(
                 decode_id=first_decode_id,
-                data=initial_decode_data,
+                data=action_decode_window,
                 timestamp_s=action_start_time_s,
             )
+            
             if submit_ok:
                 action_last_decode_submit_s = action_start_time_s
                 action_next_decode_id += 1
@@ -1612,24 +1617,37 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 # update/draw components on each frame
                 # Run 'Each Frame' code from act_code
                 action_now_s = monotonic_time_s()
-                # 1. 判断时间是否超过100ms，如果超过，就获取新的5s窗口的数据
+                new_chunk = np.empty((128,step_points))
+                
+                # 1. 每100ms取一次100ms新数据
                 if (action_now_s - action_last_decode_submit_s) >= decode_interval_s:
-                    decode_data = dc.get_data(window_points)
-                    if not decoder_thread.is_busy():
-                        decode_id = action_next_decode_id
-                        # submit新获取的数据
-                        submit_ok = decoder_thread.submit(  
-                            decode_id=decode_id,
-                            data=decode_data[:, -window_points:],
-                            timestamp_s=action_now_s,
-                        )
+                    new_chunk = dc.get_data(step_points)
+                    # 只有拿到非空二维数据，且点数足够100ms时，才开始解码
+                    if (
+                        new_chunk is not None
+                        and getattr(new_chunk, "size", 0) > 0
+                        and hasattr(new_chunk, "ndim")
+                        and new_chunk.ndim == 2
+                        and new_chunk.shape[1] >= step_points
+                    ):
+                        
+                        action_decode_window = np.concatenate([action_decode_window[:, step_points:], new_chunk],axis=1)
                 
-                        if submit_ok:
-                            action_last_decode_submit_s = action_now_s
-                            action_next_decode_id += 1
+                        if not decoder_thread.is_busy():
+                            decode_id = action_next_decode_id
+                            submit_ok = decoder_thread.submit(
+                                decode_id=decode_id,
+                                data=action_decode_window,
+                                timestamp_s=action_now_s,
+                            )
                 
-                # 2 解码完成后返回结果
+                            if submit_ok:
+                                action_last_decode_submit_s = action_now_s
+                                action_next_decode_id += 1
+                
+                # 2. 解码完成后返回结果
                 decode_payload = decoder_thread.consume_result()
+                
                 if decode_payload is not None:
                     action_decode_count += 1
                     decode_id = decode_payload["decode_id"]
@@ -1638,19 +1656,19 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     predicted_target = decode_result.get("predicted_target", None)
                     decode_success = bool(decode_result.get("success", False))
                 
-                    ## 2.1 默认不发刺激
+                    # 默认不发刺激
                     should_stim = False
                     command_label = ""
                 
-                    ## 2.2 判断是否要发送刺激(任务态 & 存在刺激器 & 刺激器可用需要同时满足)
+                    # 3. 判断是否要发送刺激
                     if decode_success:
-                        if predicted_target == 1:
+                        if predicted_target == 1 or predicted_target == "1":
                             if stimulator_enabled and stimulator is not None:
                                 if not stim_thread.is_busy():
                                     should_stim = True
                                     command_label = f"stim_target_{predicted_target}_{stim_duration_ms}ms"
                 
-                    ## 2.3 如果should_stim=False就不会发送，should_stim的Ture/False状态由线程是否busy决定
+                    # 4. 交给刺激线程
                     stim_thread.submit(
                         decode_id=decode_id,
                         should_stim=should_stim,
@@ -1659,18 +1677,16 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                         command_label=command_label,
                     )
                 
-                    # 3. 结果记录
+                    # 5. 日志记录
                     log_row = {
                         "decode_id": decode_id,
                         "participant": expInfo.get("participant", "unknown"),
                         "session": expInfo.get("session", "001"),
-                        "block_num": block_num,
-                        "trial_num": trial_num,
                         "action_start_time_s": round(action_start_time_s, 6),
                         "action_end_time_s": "",
                         "time_in_action_s": round(action_now_s - action_start_time_s, 6),
                         "data_received_time_s": decode_payload.get("data_received_time_s", ""),
-                        "data_shape": str(decode_payload.get("data_shape", "")),
+                        "data_shape": decode_payload.get("data_shape", ""),
                         "preprocess_time_ms": decode_payload.get("preprocess_time_ms", ""),
                         "decode_time_ms": decode_payload.get("decode_time_ms", ""),
                         "decode_result": predicted_target,
@@ -1682,8 +1698,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     action_log_cache.append(log_row)
                     action_pending_log_by_id[decode_id] = len(action_log_cache) - 1
                 
-                # 4. 将输出的刺激的状态和内容也一起保存
+                # 6. 回填刺激状态
                 stim_payload = stim_thread.consume_result()
+                
                 if stim_payload is not None:
                     decode_id = stim_payload.get("decode_id", None)
                 
@@ -1693,7 +1710,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                         if 0 <= row_idx < len(action_log_cache):
                             action_log_cache[row_idx]["command_sent"] = stim_payload.get("command_sent", 0)
                             action_log_cache[row_idx]["command_content"] = stim_payload.get("command_content", "")
-                
                 
                 # *act_movie* updates
                 
@@ -1798,21 +1814,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             # Run 'End Routine' code from act_code
             action_end_time_s = monotonic_time_s()
             
-            # 1. 停止后台线程
-            if decoder_thread is not None:
-                decoder_thread.stop()
-                if decoder_thread.is_alive():
-                    decoder_thread.join(timeout=1.0)
-            
-            if stim_thread is not None:
-                stim_thread.stop()
-                if stim_thread.is_alive():
-                    stim_thread.join(timeout=1.0)
-            
-            for row in action_log_cache:
-                row["action_end_time_s"] = round(action_end_time_s, 6)
-            
-            # 2. 保存本次 action 的完整解码日志
+            # 保存本次 action 的完整解码日志
             try:
                 save_action_decode_logs(action_log_cache, action_log_file_path)
             except Exception as e:
@@ -2486,14 +2488,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     thisExp.nextEntry()
     # Run 'End Experiment' code from init_code
     cleanup_all_resources()
-    # Run 'End Experiment' code from act_code
-    # 关闭刺激器
-    try:
-        if stimulator is not None:
-            stimulator.disconnect()
-    except Exception as e:
-        print(f"stimulator.disconnect failed: {e}")
-    
     
     # mark experiment as finished
     endExperiment(thisExp, win=win)
