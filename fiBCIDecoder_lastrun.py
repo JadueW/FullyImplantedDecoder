@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2024.2.5),
-    on 三月 14, 2026, at 17:39
+    on 三月 14, 2026, at 18:09
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -286,7 +286,7 @@ def cleanup_all_resources():
     # 1. 停止 DataRecv
     if dc:
         try:
-            dc.disConnect()
+            dc.close_conn()
             logging.info("✓ DataController closed")
         except Exception as e:
             logging.error(f"✗ Error closing DataController: {e}")
