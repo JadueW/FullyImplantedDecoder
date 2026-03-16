@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2024.2.5),
-    on 三月 16, 2026, at 10:33
+    on 三月 16, 2026, at 17:17
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -64,6 +64,7 @@ from src.welink_stimulator.stimulator_controller import (
     StimulationParams,
 )
 
+
 from src.utils.exit_handler import patch_core_quit, register_cleanup_function
 
 
@@ -73,7 +74,6 @@ def monotonic_time_s():
 
 
 def save_action_decode_logs(log_rows, csv_path):
-    # 保存单次 action 的完整解码日志
     if not log_rows:
         return
 
@@ -105,7 +105,6 @@ def save_action_decode_logs(log_rows, csv_path):
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(log_rows)
-
 
 
 # 2. 读取配置文件
@@ -272,7 +271,7 @@ decoder_thread = DecoderThread(
     model_bundle=model_bundle,
 )
 
-# 9. 初始化 stim 线程
+# 9. 初始化stim线程
 stim_thread = StimThread(
     stimulator=stimulator if stimulator_enabled else None,
 )
@@ -310,6 +309,13 @@ def cleanup_all_resources():
         except Exception as e:
             logging.error(f"✗ Error stopping decoder_thread: {e}")
 
+    if stimulator:
+        try:
+            stimulator.disconnect()
+            logging.info("✓ stimulator stopped")
+        except Exception as e:
+            logging.error(f"✗ Error stopping stimulator: {e}")
+    
     if stim_thread:
         try:
             stim_thread.stim_stop()
@@ -317,13 +323,7 @@ def cleanup_all_resources():
         except Exception as e:
             logging.error(f"✗ Error stopping stim_thread: {e}")
 
-    if stimulator:
-        try:
-            stimulator.disconnect()
-            logging.info("✓ stimulator stopped")
-        except Exception as e:
-            logging.error(f"✗ Error stopping stimulator: {e}")
-
+    
     logging.info("=" * 50)
     logging.info("All resources cleaned up")
 
@@ -341,6 +341,23 @@ logging.info("Upper Limb Movement Paradigm Initialized")
 logging.info(f"Task: {task_desc.get(str(task_type), 'unknown')}")
 logging.info("=" * 50)
 
+# 11. 解码类别 -> 刺激参数映射
+# route: 通路，A通道 0-7 对应 A0-A7；B通道 0-7 对应 B0-B7
+# prescription_id: 处方号，1-13
+# level: 档位，1-32
+# duration_code: 1=10min, 2=20min, 3=30min
+stim_param_map = {
+    0: StimulationParams(
+        channel="A",
+        a=ChannelStimConfig(route=0, prescription_id=12, level=1, duration_code=1),
+    ),
+    1: StimulationParams(
+        channel="B",
+        b=ChannelStimConfig(route=0, prescription_id=2, level=1, duration_code=1),
+    ),
+}
+
+# 12. 全局变量
 action_decode_log_dir = os.path.join("./logs", "action_decode_logs")
 os.makedirs(action_decode_log_dir, exist_ok=True)
 
@@ -359,22 +376,18 @@ decode_interval_s = 0.1
 decode_window_s = 5.0
 stim_duration_ms = int(config.get("experiment", {}).get("stim_duration_ms", 500))
 window_points = int(decode_window_s * decoder_cfg["fs"])
+global_decode_id = 1
 
-# 11. 解码类别 -> 刺激参数映射
-# route: 通路，A通道 0-7 对应 A0-A7；B通道 0-7 对应 B0-B7
-# prescription_id: 处方号，1-13
-# level: 档位，1-32
-# duration_code: 1=10min, 2=20min, 3=30min
-stim_param_map = {
-    0: StimulationParams(
-        channel="A",
-        a=ChannelStimConfig(route=0, prescription_id=2, level=1, duration_code=1),
-    ),
-    1: StimulationParams(
-        channel="B",
-        a=ChannelStimConfig(route=0, prescription_id=2, level=1, duration_code=1),
-    ),
-}
+stim_window_active = False
+stim_window_decode_id = None
+stim_window_row_idx = None
+stim_window_command_label = ""
+stim_window_params = None
+stim_window_deadline_s = 0.0
+
+stim_stop_pending = False
+stim_stop_decode_id = None
+
 
 # --- Setup global variables (available in all functions) ---
 # create a device manager to handle hardware (keyboards, mice, mirophones, speakers, etc.)
@@ -1531,27 +1544,45 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             # Run 'Begin Routine' code from act_code
             act_movie_dir = os.path.join(video_dir, video_name)
             act_sound_dir = os.path.join(sound_dir, "开始.wav")
+            global global_decode_id
             
-            # 1. 重置本次 action 状态
             action_start_time_s = monotonic_time_s()
             action_end_time_s = 0.0
             action_now_s = 0.0
-            
-            action_last_decode_submit_s = action_start_time_s
+            action_last_fetch_s = action_start_time_s
             
             action_decode_count = 0
-            action_next_decode_id = 1
             action_log_cache = []
-            
-            action_pending_log_by_id = {}
             action_pending_chunk_shape_by_id = {}
+            action_pending_log_by_id = {}
             
-            # 2. 基本参数
+            while decoder_thread.consume_result() is not None:
+                pass
+            
+            while stim_thread.consume_result() is not None:
+                pass
+            
+            if stimulator_enabled and stimulator is not None and getattr(stimulator, "is_stimulating", False):
+                try:
+                    stimulator.stop_stimulation()
+                except Exception as e:
+                    print(f"WARNING: stop residual stimulation failed at action begin: {e}")
+            
+            stim_window_active = False
+            stim_window_decode_id = None
+            stim_window_row_idx = None
+            stim_window_command_label = ""
+            stim_window_params = None
+            stim_window_deadline_s = 0.0
+            
+            stim_stop_pending = False
+            stim_stop_decode_id = None
+            
             fs = int(decoder_cfg["fs"])
-            window_points = int(decode_window_s * fs) 
+            step_points = int(decode_interval_s * fs)
+            window_points = int(decode_window_s * fs)
             expected_channels = 128
             
-            # 3. 本次 action 的日志文件
             participant_id = expInfo.get("participant", "unknown")
             session_id = expInfo.get("session", "001")
             timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
@@ -1561,7 +1592,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 f"action_decode_p{participant_id}_s{session_id}_{timestamp_str}.csv"
             )
             
-            # 4. 初始化解码窗，但不立刻提交解码
             action_decode_window = dc.get_data(window_points)
             
             if (
@@ -1620,10 +1650,31 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 # Run 'Each Frame' code from act_code
                 action_now_s = monotonic_time_s()
                 
-                # 1. 到了解码周期，就一次性取出缓冲区中当前所有新数据
-                if (action_now_s - action_last_decode_submit_s) >= decode_interval_s:
-                    new_chunk = dc.get_data(-1)
+                # 1. 到了 500ms 截止时间，就结束业务窗口，并异步提交 stop
+                if stim_window_active and action_now_s >= stim_window_deadline_s:
+                    stim_window_active = False
+                
+                    if (
+                        (not stim_stop_pending)
+                        and stim_window_params is not None
+                        and (not stim_thread.is_busy())
+                    ):
+                        stop_submit_ok = stim_thread.submit(
+                            decode_id=stim_window_decode_id,
+                            command_type="stop",
+                            params=stim_window_params,
+                            command_label=stim_window_command_label,
+                        )
+                
+                        if stop_submit_ok:
+                            stim_stop_pending = True
+                            stim_stop_decode_id = stim_window_decode_id
+                
+                # 2. 每 100ms 固定取一次 100ms 数据块
+                if (action_now_s - action_last_fetch_s) >= decode_interval_s:
+                    new_chunk = dc.get_data(step_points)
                     current_new_chunk_shape = ""
+                    action_last_fetch_s = action_now_s
                 
                     if (
                         new_chunk is not None
@@ -1634,7 +1685,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                         new_chunk = np.asarray(new_chunk, dtype=float)
                         current_new_chunk_shape = str(tuple(new_chunk.shape))
                 
-                        # 通道数不一致时，跳过这次拼接，避免窗口损坏
                         if action_decode_window.size == 0:
                             action_decode_window = new_chunk
                         elif new_chunk.shape[0] == action_decode_window.shape[0]:
@@ -1648,20 +1698,18 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                                 f"window={action_decode_window.shape}, new={new_chunk.shape}"
                             )
                 
-                        # 始终只保留最近一个解码窗长度的数据
                         if (
                             action_decode_window.ndim == 2
                             and action_decode_window.shape[1] > window_points
                         ):
                             action_decode_window = action_decode_window[:, -window_points:]
                 
-                        # 只有当窗口长度足够时才提交解码
                         if (
                             action_decode_window.ndim == 2
                             and action_decode_window.shape[1] >= window_points
                             and not decoder_thread.is_busy()
                         ):
-                            decode_id = action_next_decode_id
+                            decode_id = global_decode_id
                             decode_input = action_decode_window[:, -window_points:]
                 
                             submit_ok = decoder_thread.submit(
@@ -1671,11 +1719,10 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                             )
                 
                             if submit_ok:
-                                action_last_decode_submit_s = action_now_s
-                                action_next_decode_id += 1
+                                global_decode_id += 1
                                 action_pending_chunk_shape_by_id[decode_id] = current_new_chunk_shape
                 
-                # 2. 解码完成后返回结果
+                # 3. 解码完成后返回结果
                 decode_payload = decoder_thread.consume_result()
                 
                 if decode_payload is not None:
@@ -1698,9 +1745,10 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 
                     new_chunk_shape = action_pending_chunk_shape_by_id.pop(decode_id, "")
                 
-                    # 3. 判断是否应该刺激
                     want_stim = decode_success and (predicted_target == 1 or predicted_target == 0)
-                    should_stim = False
+                    should_stim = int(want_stim)
+                    stim_submit_ok = 0
+                    command_sent = 0
                     command_label = ""
                     stim_error = ""
                 
@@ -1709,26 +1757,37 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 
                         if not stimulator_enabled or stimulator is None:
                             stim_error = "stimulator_not_enabled"
+                        elif stim_window_active:
+                            stim_error = "stim_is_busy"
                         elif stim_thread.is_busy():
-                            stim_error = "stim_thread_busy"
+                            stim_error = "stim_is_busy"
                         else:
-                            should_stim = True
+                            params = stim_param_map.get(predicted_target, None)
                 
-                    # 4. 交给刺激线程
-                    stim_submit_ok = int(
-                        stim_thread.submit(
-                            decode_id=decode_id,
-                            should_stim=should_stim,
-                            params=stim_param_map.get(predicted_target, None),
-                            duration_ms=stim_duration_ms,
-                            command_label=command_label,
-                        )
-                    )
+                            if params is None:
+                                stim_error = "stim_params_missing"
+                            else:
+                                stim_submit_ok = int(
+                                    stim_thread.submit(
+                                        decode_id=decode_id,
+                                        command_type="start",
+                                        params=params,
+                                        command_label=command_label,
+                                    )
+                                )
                 
-                    if want_stim and not stim_submit_ok and not stim_error:
-                        stim_error = "stim_thread_queue_full"
+                                if stim_submit_ok:
+                                    stim_window_active = True
+                                    stim_window_decode_id = decode_id
+                                    stim_window_row_idx = None
+                                    stim_window_command_label = command_label
+                                    stim_window_params = params
+                                    stim_window_deadline_s = action_now_s + stim_duration_ms / 1000.0
+                                    stim_stop_pending = False
+                                    stim_stop_decode_id = None
+                                else:
+                                    stim_error = "stim_is_busy"
                 
-                    # 5. 日志记录
                     log_row = {
                         "decode_id": decode_id,
                         "participant": expInfo.get("participant", "unknown"),
@@ -1744,27 +1803,32 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                         "total_pipeline_time_ms": total_pipeline_time_ms,
                         "decode_result": predicted_target,
                         "confidence": decode_result.get("confidence", ""),
-                        "should_stim": int(should_stim),
+                        "should_stim": should_stim,
                         "stim_submit_ok": stim_submit_ok,
-                        "command_sent": 0,
+                        "command_sent": command_sent,
                         "command_content": command_label,
                         "stim_error": stim_error,
                     }
                 
                     action_log_cache.append(log_row)
-                    action_pending_log_by_id[decode_id] = len(action_log_cache) - 1
                 
-                # 6. 回填刺激状态
+                    if stim_submit_ok:
+                        action_pending_log_by_id[decode_id] = len(action_log_cache) - 1
+                        stim_window_row_idx = len(action_log_cache) - 1
+                
+                # 4. 回填刺激线程结果
                 stim_payload = stim_thread.consume_result()
                 
                 if stim_payload is not None:
                     decode_id = stim_payload.get("decode_id", None)
+                    command_type = stim_payload.get("command_type", "")
                 
                     if decode_id in action_pending_log_by_id:
-                        row_idx = action_pending_log_by_id.pop(decode_id)
+                        row_idx = action_pending_log_by_id[decode_id]
                 
                         if 0 <= row_idx < len(action_log_cache):
-                            action_log_cache[row_idx]["command_sent"] = stim_payload.get("command_sent", 0)
+                            if command_type == "start":
+                                action_log_cache[row_idx]["command_sent"] = stim_payload.get("command_sent", 0)
                 
                             returned_content = stim_payload.get("command_content", "")
                             if returned_content:
@@ -1772,7 +1836,22 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 
                             stim_error_text = stim_payload.get("error", "")
                             if stim_error_text:
-                                action_log_cache[row_idx]["stim_error"] = stim_error_text
+                                old_error = action_log_cache[row_idx].get("stim_error", "")
+                                if old_error:
+                                    action_log_cache[row_idx]["stim_error"] = f"{old_error};{stim_error_text}"
+                                else:
+                                    action_log_cache[row_idx]["stim_error"] = stim_error_text
+                
+                    if command_type == "stop" and decode_id == stim_stop_decode_id:
+                        stim_stop_pending = False
+                        stim_stop_decode_id = None
+                
+                        if not stim_window_active:
+                            stim_window_decode_id = None
+                            stim_window_row_idx = None
+                            stim_window_command_label = ""
+                            stim_window_params = None
+                            stim_window_deadline_s = 0.0
                 
                 
                 # *act_movie* updates
@@ -1876,12 +1955,32 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             action.tStopRefresh = tThisFlipGlobal
             thisExp.addData('action.stopped', action.tStop)
             # Run 'End Routine' code from act_code
-            # action 结束时间
             action_end_time_s = monotonic_time_s()
             
-            drain_deadline = time.perf_counter() + 0.6
+            # action 结束时，如果业务窗口还在，先直接关闭业务窗口
+            if stim_window_active:
+                stim_window_active = False
             
-            while action_pending_log_by_id and time.perf_counter() < drain_deadline:
+            # 如果 stop 还没提交，且有有效参数，则补提一次 stop
+            if (
+                (not stim_stop_pending)
+                and stim_window_params is not None
+                and (not stim_thread.is_busy())
+            ):
+                stop_submit_ok = stim_thread.submit(
+                    decode_id=stim_window_decode_id if stim_window_decode_id is not None else -1,
+                    command_type="stop",
+                    params=stim_window_params,
+                    command_label=stim_window_command_label,
+                )
+                if stop_submit_ok:
+                    stim_stop_pending = True
+                    stim_stop_decode_id = stim_window_decode_id
+            
+            # 给线程一点时间回填 start/stop 结果
+            drain_deadline = time.perf_counter() + 0.8
+            
+            while time.perf_counter() < drain_deadline:
                 stim_payload = stim_thread.consume_result()
             
                 if stim_payload is None:
@@ -1889,12 +1988,14 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     continue
             
                 decode_id = stim_payload.get("decode_id", None)
+                command_type = stim_payload.get("command_type", "")
             
                 if decode_id in action_pending_log_by_id:
-                    row_idx = action_pending_log_by_id.pop(decode_id)
+                    row_idx = action_pending_log_by_id[decode_id]
             
                     if 0 <= row_idx < len(action_log_cache):
-                        action_log_cache[row_idx]["command_sent"] = stim_payload.get("command_sent", 0)
+                        if command_type == "start":
+                            action_log_cache[row_idx]["command_sent"] = stim_payload.get("command_sent", 0)
             
                         returned_content = stim_payload.get("command_content", "")
                         if returned_content:
@@ -1902,17 +2003,31 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             
                         stim_error_text = stim_payload.get("error", "")
                         if stim_error_text:
-                            action_log_cache[row_idx]["stim_error"] = stim_error_text
+                            old_error = action_log_cache[row_idx].get("stim_error", "")
+                            if old_error:
+                                action_log_cache[row_idx]["stim_error"] = f"{old_error};{stim_error_text}"
+                            else:
+                                action_log_cache[row_idx]["stim_error"] = stim_error_text
             
-            for pending_decode_id, row_idx in list(action_pending_log_by_id.items()):
-                if 0 <= row_idx < len(action_log_cache):
-                    if not action_log_cache[row_idx].get("stim_error", ""):
-                        action_log_cache[row_idx]["stim_error"] = "stim_result_pending_when_action_end"
+                if command_type == "stop" and decode_id == stim_stop_decode_id:
+                    stim_stop_pending = False
+                    stim_stop_decode_id = None
+                    stim_window_decode_id = None
+                    stim_window_row_idx = None
+                    stim_window_command_label = ""
+                    stim_window_params = None
+                    stim_window_deadline_s = 0.0
+            
+            # 如果 action 结束时 stop 还没回，不再把它当作业务 busy，只做标记
+            if stim_stop_pending and stim_window_row_idx is not None:
+                if 0 <= stim_window_row_idx < len(action_log_cache):
+                    old_error = action_log_cache[stim_window_row_idx].get("stim_error", "")
+                    if not old_error:
+                        action_log_cache[stim_window_row_idx]["stim_error"] = "stop_result_pending_when_action_end"
             
             for row in action_log_cache:
                 row["action_end_time_s"] = round(action_end_time_s, 6)
             
-            # 保存结果
             try:
                 save_action_decode_logs(action_log_cache, action_log_file_path)
             except Exception as e:
