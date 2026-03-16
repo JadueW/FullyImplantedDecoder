@@ -1,7 +1,7 @@
-import threading
 import time
 import warnings
 from dataclasses import asdict, dataclass, field
+import threading
 
 import serial
 
@@ -179,8 +179,6 @@ class StimulatorController:
         self.level_limit_enabled = None
 
         self._lock = threading.RLock()
-        self._stop_event = threading.Event()
-        self._stim_duration_thread = None
         self._stim_start_time = 0.0
 
     def connect(self):
@@ -302,7 +300,33 @@ class StimulatorController:
         data_len = (response[3] << 8) | response[4]
         return response[5:5 + data_len]
 
-    def _send_command(self, cmd, data=b'', expect_response=True, response_timeout=None):
+    def _discard_stale_input(self):
+        if not self.serial_conn or not self.serial_conn.is_open:
+            return
+
+        try:
+            waiting = int(getattr(self.serial_conn, "in_waiting", 0))
+        except Exception:
+            waiting = 0
+
+        if waiting <= 0:
+            return
+
+        try:
+            stale_bytes = self.serial_conn.read(waiting)
+            if self.debug and stale_bytes:
+                print(f'Discarded stale stimulator bytes: {stale_bytes.hex(" ").upper()}')
+        except Exception as exc:
+            warnings.warn(f'Failed to discard stale stimulator input: {exc}')
+
+    def _send_command(
+        self,
+        cmd,
+        data=b'',
+        expect_response=True,
+        response_timeout=None,
+        expected_response_cmd=None,
+    ):
         if not self.is_connected and not self.connect():
             return None
 
@@ -312,11 +336,49 @@ class StimulatorController:
 
         with self._lock:
             try:
+                if expect_response:
+                    self._discard_stale_input()
                 self.serial_conn.write(frame)
                 self.serial_conn.flush()
                 if not expect_response:
                     return b''
-                return self._read_response(timeout=response_timeout)
+                deadline = None
+                if response_timeout is not None:
+                    deadline = time.perf_counter() + float(response_timeout)
+
+                while True:
+                    remaining = None
+                    if deadline is not None:
+                        remaining = deadline - time.perf_counter()
+                        if remaining <= 0:
+                            return None
+
+                    response = self._read_response(timeout=remaining)
+                    if response is None:
+                        return None
+
+                    if expected_response_cmd is None or response[2] == expected_response_cmd:
+                        return response
+
+                    # start/stop commands are sent fire-and-forget, but some devices still
+                    # emit a delayed 0x32 response that can arrive just before the next
+                    # response-expected command (for example 0x31 set_params). Treat that
+                    # specific pattern as benign stale input and drop it silently unless
+                    # debug logging is enabled.
+                    if (
+                        expected_response_cmd == self.CMD_SET_PARAMS
+                        and response[2] == self.CMD_START_STOP
+                    ):
+                        if self.debug:
+                            print(
+                                "Discarded stale 0x32 response before expected 0x31 response."
+                            )
+                        continue
+
+                    warnings.warn(
+                        f'Unexpected response command: expected 0x{expected_response_cmd:02X}, '
+                        f'got 0x{response[2]:02X}; skipping stale response.'
+                    )
             except Exception as exc:
                 warnings.warn(f'Failed to send stimulator command: {exc}')
                 return None
@@ -335,10 +397,12 @@ class StimulatorController:
 
     def set_stimulation_params(self, params):
         params = self._normalize_params(params)
+
         response = self._send_command(
             self.CMD_SET_PARAMS,
             params.to_payload(),
             expect_response=True,
+            expected_response_cmd=self.CMD_SET_PARAMS,
         )
         payload = self._extract_payload(response, expected_cmd=self.CMD_SET_PARAMS)
         if payload == params.to_payload():
@@ -346,53 +410,36 @@ class StimulatorController:
             return True
         return False
 
-    def _start_duration_timer(self, duration_ms):
-        self._stop_event.clear()
-
-        def timer_loop():
-            if self._stop_event.wait(duration_ms / 1000.0):
-                return
-            if self.is_stimulating:
-                self.stop_stimulation()
-
-        self._stim_duration_thread = threading.Thread(
-            target=timer_loop,
-            name='StimDurationThread',
-            daemon=True,
-        )
-        self._stim_duration_thread.start()
-
     def start_stimulation(self, duration_ms=None, channel=None):
         channel_name = str(channel or getattr(self.current_params, 'channel', 'AB')).upper()
         channel_code = self.CHANNEL_MAP.get(channel_name, 0xFF)
-        expected_payload = bytes([0x01, channel_code])
         response = self._send_command(
             self.CMD_START_STOP,
-            expected_payload,
-            expect_response=True,
+            bytes([0x01, channel_code]),
+            expect_response=False,
         )
-        payload = self._extract_payload(response, expected_cmd=self.CMD_START_STOP)
-        if payload != expected_payload:
+        if response is None:
             return False
 
         self.is_stimulating = True
         self._stim_start_time = time.time()
         if duration_ms is not None:
-            self._start_duration_timer(duration_ms)
+            warnings.warn(
+                'start_stimulation(duration_ms=...) no longer auto-stops. '
+                'Use explicit stop_stimulation() from the caller when the duration elapses.'
+            )
         return True
 
     def stop_stimulation(self, channel=None):
-        self._stop_event.set()
         channel_name = str(channel or getattr(self.current_params, 'channel', 'AB')).upper()
         channel_code = self.CHANNEL_MAP.get(channel_name, 0xFF)
         expected_payload = bytes([0x00, channel_code])
         response = self._send_command(
             self.CMD_START_STOP,
             expected_payload,
-            expect_response=True,
+            expect_response=False,
         )
-        payload = self._extract_payload(response, expected_cmd=self.CMD_START_STOP)
-        if payload != expected_payload:
+        if response is None:
             return False
 
         self.is_stimulating = False
@@ -412,6 +459,7 @@ class StimulatorController:
             self.CMD_SWITCH_CHANNEL,
             payload,
             expect_response=True,
+            expected_response_cmd=self.CMD_SWITCH_CHANNEL,
         )
         response_payload = self._extract_payload(response, expected_cmd=self.CMD_SWITCH_CHANNEL)
         return response_payload == payload
@@ -422,6 +470,7 @@ class StimulatorController:
             self.CMD_LEVEL_LIMIT,
             payload,
             expect_response=True,
+            expected_response_cmd=self.CMD_LEVEL_LIMIT,
         )
         response_payload = self._extract_payload(response, expected_cmd=self.CMD_LEVEL_LIMIT)
         if response_payload == payload:
@@ -440,7 +489,11 @@ class StimulatorController:
         params = self._normalize_params(params)
         if not self.set_stimulation_params(params):
             return False
-        return self.start_stimulation(duration_ms=duration_ms, channel=params.channel)
+        warnings.warn(
+            'send_command_with_duration() now only sends set_params + start. '
+            'The caller must send stop_stimulation() after the desired duration.'
+        )
+        return self.start_stimulation(channel=params.channel)
 
     def execute_command(self, command):
         if isinstance(command, dict):
