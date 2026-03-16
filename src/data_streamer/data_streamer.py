@@ -8,8 +8,9 @@ from src.decoder.features_extract.feature_extract import extract_feature
 from src.decoder.online_inference.ml_decoder.ml_decoder import decode
 from src.decoder.preprocess.preprocessor import preprocess_data
 
+
 class DecoderThread(threading.Thread):
-    # 解码线程：接收 ndarray，完成预处理+特征提取+解码
+    # Decoder thread: preprocesses data, extracts features, and runs decoding.
     def __init__(self, fs, decoder_cfg, feature_cfg, model_bundle, name="DecoderThread"):
         super().__init__(name=name, daemon=True)
         self.fs = fs
@@ -120,14 +121,15 @@ class DecoderThread(threading.Thread):
 
 
 class StimThread(threading.Thread):
-    # 刺激线程：接收一个 bool，决定是否发刺激，并控制持续时间后停止
+    """Execute short stimulator I/O commands without owning timing policy."""
+
     def __init__(self, stimulator=None, name="StimThread"):
         super().__init__(name=name, daemon=True)
         self.stimulator = stimulator
 
         self._stop_event = threading.Event()
-        self._command_queue = queue.Queue(maxsize=1)
-        self._result_queue = queue.Queue(maxsize=10)
+        self._command_queue = queue.Queue(maxsize=4)
+        self._result_queue = queue.Queue(maxsize=20)
         self._busy_lock = threading.Lock()
         self._is_busy = False
 
@@ -139,24 +141,30 @@ class StimThread(threading.Thread):
         with self._busy_lock:
             return self._is_busy
 
-    def submit(self, decode_id, should_stim, params=None, duration_ms=500, command_label=""):
+    def _push_result(self, result_payload):
+        while True:
+            try:
+                self._result_queue.put_nowait(result_payload)
+                return
+            except queue.Full:
+                try:
+                    self._result_queue.get_nowait()
+                except queue.Empty:
+                    return
+
+    def submit(self, decode_id, command_type, params=None, command_label=""):
         payload = {
             "decode_id": int(decode_id),
-            "should_stim": bool(should_stim),
+            "command_type": str(command_type),
             "params": params,
-            "duration_ms": int(duration_ms),
             "command_label": command_label,
         }
 
-        while True:
-            try:
-                self._command_queue.put_nowait(payload)
-                return True
-            except queue.Full:
-                try:
-                    self._command_queue.get_nowait()
-                except queue.Empty:
-                    return False
+        try:
+            self._command_queue.put_nowait(payload)
+            return True
+        except queue.Full:
+            return False
 
     def consume_result(self):
         try:
@@ -171,6 +179,7 @@ class StimThread(threading.Thread):
                 self.stimulator.stop_stimulation()
         except Exception:
             pass
+        self._set_busy(False)
 
     def run(self):
         while not self._stop_event.is_set():
@@ -179,59 +188,53 @@ class StimThread(threading.Thread):
             except queue.Empty:
                 continue
 
-            self._set_busy(True)
-
             decode_id = payload["decode_id"]
-            should_stim = payload["should_stim"]
+            command_type = payload["command_type"]
             params = payload["params"]
-            duration_ms = payload["duration_ms"]
             command_label = payload["command_label"]
 
-            command_sent = 0
+            if self.stimulator is None or params is None:
+                self._push_result(
+                    {
+                        "decode_id": decode_id,
+                        "command_type": command_type,
+                        "command_sent": 0,
+                        "command_content": command_label,
+                        "error": "stimulator_unavailable",
+                    }
+                )
+                continue
+
+            success = 0
             error_message = ""
 
+            self._set_busy(True)
             try:
-                # 只有 should_stim=True 且刺激器可用时才真的发刺激
-                if should_stim and self.stimulator is not None and params is not None:
-                    command_sent = int(
-                        bool(
-                            self.stimulator.send_command_with_duration(
-                                params=params,
-                                duration_ms=duration_ms,
-                            )
-                        )
-                    )
-
-                    # 持续刺激指定时间后，主动停止
-                    if command_sent:
-                        deadline = time.perf_counter() + duration_ms / 1000.0
-                        while (not self._stop_event.is_set()) and (time.perf_counter() < deadline):
-                            time.sleep(0.005)
-
-                        try:
-                            self.stimulator.stop_stimulation()
-                        except Exception:
-                            pass
-
+                if command_type == "start":
+                    params_ok = bool(self.stimulator.set_stimulation_params(params))
+                    if not params_ok:
+                        error_message = "set_params_failed"
+                    else:
+                        success = int(bool(self.stimulator.start_stimulation(channel=params.channel)))
+                        if not success:
+                            error_message = "start_stim_failed"
+                elif command_type == "stop":
+                    success = int(bool(self.stimulator.stop_stimulation(channel=params.channel)))
+                    if not success:
+                        error_message = "stop_stim_failed"
+                else:
+                    error_message = f"unsupported_command:{command_type}"
             except Exception as e:
                 error_message = str(e)
-                command_sent = 0
+            finally:
+                self._set_busy(False)
 
-            result_payload = {
-                "decode_id": decode_id,
-                "command_sent": command_sent,
-                "command_content": command_label if command_sent else "",
-                "error": error_message,
-            }
-
-            while True:
-                try:
-                    self._result_queue.put_nowait(result_payload)
-                    break
-                except queue.Full:
-                    try:
-                        self._result_queue.get_nowait()
-                    except queue.Empty:
-                        break
-
-            self._set_busy(False)
+            self._push_result(
+                {
+                    "decode_id": decode_id,
+                    "command_type": command_type,
+                    "command_sent": success,
+                    "command_content": command_label,
+                    "error": error_message,
+                }
+            )
