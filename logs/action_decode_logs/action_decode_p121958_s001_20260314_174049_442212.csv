@@ -1,3 +1,0 @@
-decode_id,participant,session,action_start_time_s,action_end_time_s,time_in_action_s,data_received_time_s,data_shape,preprocess_time_ms,decode_time_ms,decode_result,confidence,command_sent,command_content
-1,121958,001,79.059431,89.048907,0.243347,79.059431,"(128, 10000)",30.147,97.642,0,0.9999979785822911,0,
-2,121958,001,79.059431,89.048907,0.382896,79.302778,"(128, 10000)",31.463,98.001,0,0.9999980554760117,0,
