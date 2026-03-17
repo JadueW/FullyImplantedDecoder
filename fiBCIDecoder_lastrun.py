@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2024.2.5),
-    on 三月 16, 2026, at 17:17
+    on 三月 17, 2026, at 11:56
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -1815,7 +1815,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     if stim_submit_ok:
                         action_pending_log_by_id[decode_id] = len(action_log_cache) - 1
                         stim_window_row_idx = len(action_log_cache) - 1
-                
+                                
+                                
                 # 4. 回填刺激线程结果
                 stim_payload = stim_thread.consume_result()
                 
