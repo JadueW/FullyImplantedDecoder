@@ -2,6 +2,8 @@ import time
 import warnings
 from dataclasses import asdict, dataclass, field
 import threading
+import gc
+import queue
 
 import serial
 
@@ -166,7 +168,7 @@ class StimulatorController:
         0x03: 30,
     }
 
-    def __init__(self, port, baudrate=115200, timeout=1.0, debug=False):
+    def __init__(self, port, baudrate=230400, timeout=0.05, debug=True):
         self.port = port
         self.baudrate = baudrate
         self.timeout = timeout
@@ -180,6 +182,40 @@ class StimulatorController:
 
         self._lock = threading.RLock()
         self._stim_start_time = 0.0
+
+        # 优化方案1: 参数缓存和异步设置
+        self._last_params_payload = None  # 缓存最后一次设置的参数payload
+        self._params_setting_in_progress = False  # 标记参数是否正在设置中
+        self._params_async_queue = queue.Queue(maxsize=2)  # 异步参数设置队列
+        self._params_thread = None  # 异步参数设置线程
+        self._stop_event = threading.Event()  # 停止事件
+
+        # 激进的GC优化：在初始化时就禁用GC，并提高GC阈值
+        self._gc_was_enabled = gc.isenabled()
+        self._gc_optimization_enabled = True
+
+        # 设置更高的GC阈值，减少GC频率
+        if self._gc_optimization_enabled:
+            # 设置更高的阈值：(threshold0, threshold1, threshold2)
+            # 默认是(700, 10, 10)，我们设置为(10000, 100, 100)
+            gc.set_threshold(10000, 100, 100)
+            # 在初始化时进行一次彻底的GC
+            gc.collect()
+
+        # 预分配缓冲区以减少对象创建压力
+        self._read_buffer = bytearray(512)
+        self._frame_buffer = bytearray(512)
+
+        # 性能统计
+        self._stats = {
+            'total_commands': 0,
+            'total_read_retries': 0,
+            'total_discarded_bytes': 0,
+            'total_time_ms': 0.0,
+            'max_command_time_ms': 0.0,
+            'gc_pause_count': 0,  # GC暂停次数统计
+            'gc_pause_time_ms': 0.0,  # GC暂停总时间
+        }
 
     def connect(self):
         with self._lock:
@@ -202,6 +238,14 @@ class StimulatorController:
                 self.serial_conn.reset_input_buffer()
                 self.serial_conn.reset_output_buffer()
                 self.is_connected = True
+
+                # 连接成功后进行一次彻底的GC
+                if self._gc_optimization_enabled:
+                    gc.collect()
+
+                # 启动异步参数处理器（优化方案4）
+                self.start_async_params_processor()
+
                 return True
             except Exception as exc:
                 warnings.warn(f'Failed to connect stimulator: {exc}')
@@ -213,6 +257,9 @@ class StimulatorController:
             try:
                 if self.is_stimulating:
                     self.stop_stimulation()
+
+                # 停止异步参数处理器（优化方案4）
+                self.stop_async_params_processor()
 
                 if self.serial_conn and self.serial_conn.is_open:
                     self.serial_conn.close()
@@ -251,6 +298,7 @@ class StimulatorController:
         return checksum == expected_checksum
 
     def _read_response(self, timeout=None):
+        """读取刺激器响应，添加性能监控和超时检测"""
         if not self.serial_conn or not self.serial_conn.is_open:
             return None
 
@@ -258,31 +306,59 @@ class StimulatorController:
         if timeout is not None:
             self.serial_conn.timeout = timeout
 
+        read_start = time.perf_counter()
+        retry_count = 0
+        max_retries = 100  # 防止无限循环
+
         try:
-            while True:
+            # 等待帧头（添加超时检测）
+            while retry_count < max_retries:
+                retry_count += 1
                 head = self.serial_conn.read(1)
                 if not head:
-                    return None
+                    # 读取超时
+                    elapsed = (time.perf_counter() - read_start) * 1000
+                    if self.debug and elapsed > 50:
+                        print(f'[Stimulator-Read] Retry #{retry_count} after {elapsed:.0f}ms - No data')
+                    continue
                 if head[0] == self.FRAME_HEAD:
                     break
 
+            if retry_count >= max_retries:
+                elapsed = (time.perf_counter() - read_start) * 1000
+                print(f'[Stimulator-Read-Timeout] Max retries ({max_retries}) reached after {elapsed:.0f}ms')
+                return None
+
+            # 读取header
             header = self.serial_conn.read(4)
             if len(header) < 4:
+                elapsed = (time.perf_counter() - read_start) * 1000
+                print(f'[Stimulator-Read-Error] Header incomplete after {elapsed:.0f}ms')
                 return None
 
             _, _, len_h, len_l = header
             data_len = (len_h << 8) | len_l
+
+            # 读取数据+尾部
             tail = self.serial_conn.read(data_len + 2)
             if len(tail) < data_len + 2:
+                elapsed = (time.perf_counter() - read_start) * 1000
+                print(f'[Stimulator-Read-Error] Tail incomplete after {elapsed:.0f}ms (expected {data_len+2}, got {len(tail)})')
                 return None
 
             response = bytes([self.FRAME_HEAD]) + header + tail
+            read_time = (time.perf_counter() - read_start) * 1000
+
             if self.debug:
-                print(f'Stimulator response: {response.hex(" ").upper()}')
+                print(f'Stimulator response: {response.hex(" ").upper()} | Time: {read_time:.1f}ms')
 
             if not self._validate_response(response):
                 warnings.warn('Stimulator response checksum/frame validation failed.')
                 return None
+
+            # 更新统计
+            self._stats['total_read_retries'] += retry_count
+
             return response
         finally:
             self.serial_conn.timeout = old_timeout
@@ -301,6 +377,7 @@ class StimulatorController:
         return response[5:5 + data_len]
 
     def _discard_stale_input(self):
+        """丢弃串口缓冲区中的陈旧数据，添加性能监控"""
         if not self.serial_conn or not self.serial_conn.is_open:
             return
 
@@ -314,8 +391,13 @@ class StimulatorController:
 
         try:
             stale_bytes = self.serial_conn.read(waiting)
+            discarded = len(stale_bytes)
+            self._stats['total_discarded_bytes'] += discarded
+
             if self.debug and stale_bytes:
-                print(f'Discarded stale stimulator bytes: {stale_bytes.hex(" ").upper()}')
+                print(f'Discarded stale stimulator bytes: {stale_bytes.hex(" ").upper()} ({discarded} bytes)')
+            elif discarded > 10:
+                print(f'[Stimulator] Discarded {discarded} stale bytes')
         except Exception as exc:
             warnings.warn(f'Failed to discard stale stimulator input: {exc}')
 
@@ -327,8 +409,12 @@ class StimulatorController:
         response_timeout=None,
         expected_response_cmd=None,
     ):
+        """发送命令到刺激器，添加详细的性能监控"""
         if not self.is_connected and not self.connect():
             return None
+
+        # 性能监控开始
+        perf_start = time.perf_counter()
 
         frame = self._build_frame(cmd, data)
         if self.debug:
@@ -337,34 +423,49 @@ class StimulatorController:
         with self._lock:
             try:
                 if expect_response:
+                    discard_start = time.perf_counter()
                     self._discard_stale_input()
+                    discard_time = (time.perf_counter() - discard_start) * 1000
+                else:
+                    discard_time = 0
+
+                # 写入命令
+                write_start = time.perf_counter()
                 self.serial_conn.write(frame)
                 self.serial_conn.flush()
+                write_time = (time.perf_counter() - write_start) * 1000
+
                 if not expect_response:
+                    total_time = (time.perf_counter() - perf_start) * 1000
+                    if total_time > 20:
+                        print(f'[Stimulator] CMD=0x{cmd:02X} | Write:{write_time:.1f}ms | Total:{total_time:.1f}ms')
                     return b''
+
                 deadline = None
                 if response_timeout is not None:
                     deadline = time.perf_counter() + float(response_timeout)
 
+                # 读取响应（添加超时监控）
+                read_start = time.perf_counter()
+                response = None
+                loop_count = 0
+
                 while True:
+                    loop_count += 1
                     remaining = None
                     if deadline is not None:
                         remaining = deadline - time.perf_counter()
                         if remaining <= 0:
-                            return None
+                            break
 
                     response = self._read_response(timeout=remaining)
                     if response is None:
-                        return None
+                        break
 
                     if expected_response_cmd is None or response[2] == expected_response_cmd:
-                        return response
+                        break
 
-                    # start/stop commands are sent fire-and-forget, but some devices still
-                    # emit a delayed 0x32 response that can arrive just before the next
-                    # response-expected command (for example 0x31 set_params). Treat that
-                    # specific pattern as benign stale input and drop it silently unless
-                    # debug logging is enabled.
+                    # 处理延迟的响应
                     if (
                         expected_response_cmd == self.CMD_SET_PARAMS
                         and response[2] == self.CMD_START_STOP
@@ -379,7 +480,31 @@ class StimulatorController:
                         f'Unexpected response command: expected 0x{expected_response_cmd:02X}, '
                         f'got 0x{response[2]:02X}; skipping stale response.'
                     )
+
+                read_time = (time.perf_counter() - read_start) * 1000
+                total_time = (time.perf_counter() - perf_start) * 1000
+
+                # 更新统计
+                self._stats['total_commands'] += 1
+                self._stats['total_time_ms'] += total_time
+                self._stats['max_command_time_ms'] = max(self._stats['max_command_time_ms'], total_time)
+
+                # 性能监控：如果总时间超过200ms，打印详细信息
+                if total_time > 200:
+                    gc_count = gc.get_count()
+                    gc_thresholds = gc.get_threshold()
+                    print(f'[Stimulator-SLOW] CMD=0x{cmd:02X} | '
+                          f'Write:{write_time:.1f}ms | '
+                          f'Discard:{discard_time:.1f}ms | '
+                          f'Read:{read_time:.1f}ms (loops={loop_count}) | '
+                          f'Total:{total_time:.1f}ms | '
+                          f'GC_count:{gc_count} | '
+                          f'GC_thresholds:{gc_thresholds}')
+
+                return response
             except Exception as exc:
+                total_time = (time.perf_counter() - perf_start) * 1000
+                print(f'[Stimulator-ERROR] CMD=0x{cmd:02X} | Error after {total_time:.1f}ms | {exc}')
                 warnings.warn(f'Failed to send stimulator command: {exc}')
                 return None
 
@@ -396,19 +521,103 @@ class StimulatorController:
         raise TypeError('params must be a StimulationParams or dict.')
 
     def set_stimulation_params(self, params):
-        params = self._normalize_params(params)
+        """
+        设置刺激参数，支持参数缓存优化
 
-        response = self._send_command(
-            self.CMD_SET_PARAMS,
-            params.to_payload(),
-            expect_response=True,
-            expected_response_cmd=self.CMD_SET_PARAMS,
-        )
-        payload = self._extract_payload(response, expected_cmd=self.CMD_SET_PARAMS)
-        if payload == params.to_payload():
+        优化方案1: 如果参数未变，跳过SET_PARAMS命令
+        优化方案4: 异步设置参数，立即返回
+        """
+        params = self._normalize_params(params)
+        new_payload = params.to_payload()
+
+        # 优化方案1: 参数缓存检查
+        if self._last_params_payload == new_payload:
+            if self.debug:
+                print(f'[Stimulator-优化] 参数未变，跳过SET_PARAMS (payload相同)')
             self.current_params = params
             return True
-        return False
+
+        # 更新缓存的payload
+        self._last_params_payload = new_payload
+
+        # 优化方案4: 异步设置参数
+        if not self._params_setting_in_progress:
+            # 启动异步参数设置
+            self._params_setting_in_progress = True
+
+            def async_set_params():
+                try:
+                    response = self._send_command(
+                        self.CMD_SET_PARAMS,
+                        new_payload,
+                        expect_response=True,
+                        expected_response_cmd=self.CMD_SET_PARAMS,
+                    )
+                    payload = self._extract_payload(response, expected_cmd=self.CMD_SET_PARAMS)
+                    if payload == new_payload:
+                        with self._lock:
+                            self.current_params = params
+                        if self.debug:
+                            print(f'[Stimulator-优化] 异步SET_PARAMS完成')
+                    else:
+                        if self.debug:
+                            print(f'[Stimulator-优化] 异步SET_PARAMS失败，payload不匹配')
+                except Exception as e:
+                    if self.debug:
+                        print(f'[Stimulator-优化] 异步SET_PARAMS异常: {e}')
+                finally:
+                    self._params_setting_in_progress = False
+
+            # 启动后台线程处理参数设置
+            params_thread = threading.Thread(target=async_set_params, daemon=True)
+            params_thread.start()
+
+            # 立即返回，不等待参数设置完成
+            if self.debug:
+                print(f'[Stimulator-优化] 异步SET_PARAMS已启动，立即返回')
+            return True
+
+        # 如果参数正在设置中，将新请求放入队列
+        try:
+            self._params_async_queue.put_nowait(params)
+            if self.debug:
+                print(f'[Stimulator-优化] 参数正在设置，新请求已入队')
+            return True
+        except queue.Full:
+            if self.debug:
+                print(f'[Stimulator-优化] 参数队列已满，丢弃设置请求')
+            return False
+
+    def start_async_params_processor(self):
+        """启动异步参数设置处理器（优化方案4的补充）"""
+        def process_params_queue():
+            while not self._stop_event.is_set():
+                try:
+                    params = self._params_async_queue.get(timeout=0.1)
+                    # 设置最新队列中的参数
+                    self.set_stimulation_params(params)
+                except queue.Empty:
+                    continue
+                except Exception as e:
+                    if self.debug:
+                        print(f'[Stimulator-优化] 参数队列处理异常: {e}')
+
+        self._params_thread = threading.Thread(
+            target=process_params_queue,
+            name="AsyncParamsProcessor",
+            daemon=True
+        )
+        self._params_thread.start()
+        if self.debug:
+            print(f'[Stimulator-优化] 异步参数处理器已启动')
+
+    def stop_async_params_processor(self):
+        """停止异步参数设置处理器"""
+        if self._params_thread and self._params_thread.is_alive():
+            self._stop_event.set()
+            self._params_thread.join(timeout=1.0)
+            if self.debug:
+                print(f'[Stimulator-优化] 异步参数处理器已停止')
 
     def start_stimulation(self, duration_ms=None, channel=None):
         channel_name = str(channel or getattr(self.current_params, 'channel', 'AB')).upper()
@@ -593,6 +802,25 @@ class StimulatorController:
             'current_params': self.current_params.to_dict() if self.current_params else None,
             'level_limit_enabled': self.level_limit_enabled,
             'stimulation_duration_s': time.time() - self._stim_start_time if self.is_stimulating else 0.0,
+            'stats': self.get_stats(),
+        }
+
+    def get_stats(self):
+        """返回性能统计信息"""
+        if self._stats['total_commands'] > 0:
+            avg_time = self._stats['total_time_ms'] / self._stats['total_commands']
+            avg_retries = self._stats['total_read_retries'] / self._stats['total_commands']
+        else:
+            avg_time = 0.0
+            avg_retries = 0.0
+
+        return {
+            'total_commands': self._stats['total_commands'],
+            'avg_command_ms': round(avg_time, 2),
+            'max_command_ms': round(self._stats['max_command_time_ms'], 2),
+            'total_read_retries': self._stats['total_read_retries'],
+            'avg_read_retries': round(avg_retries, 2),
+            'total_discarded_bytes': self._stats['total_discarded_bytes'],
         }
 
     def __del__(self):

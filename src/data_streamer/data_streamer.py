@@ -1,6 +1,7 @@
 import queue
 import threading
 import time
+import gc
 
 import numpy as np
 
@@ -11,18 +12,27 @@ from src.decoder.preprocess.preprocessor import preprocess_data
 
 class DecoderThread(threading.Thread):
     # Decoder thread: preprocesses data, extracts features, and runs decoding.
-    def __init__(self, fs, decoder_cfg, feature_cfg, model_bundle, name="DecoderThread"):
+    def __init__(self, fs, decoder_cfg, feature_cfg, model_bundle, name="DecoderThread", debug=False):
         super().__init__(name=name, daemon=True)
         self.fs = fs
         self.decoder_cfg = decoder_cfg
         self.feature_cfg = feature_cfg
         self.model_bundle = model_bundle
+        self.debug = debug
 
         self._stop_event = threading.Event()
         self._input_queue = queue.Queue(maxsize=1)
         self._result_queue = queue.Queue(maxsize=1)
         self._busy_lock = threading.Lock()
         self._is_busy = False
+
+        # 性能统计
+        self._stats = {
+            'total_decodes': 0,
+            'total_time_ms': 0.0,
+            'max_preprocess_ms': 0.0,
+            'max_decode_ms': 0.0,
+        }
 
     def _set_busy(self, value):
         with self._busy_lock:
@@ -37,6 +47,7 @@ class DecoderThread(threading.Thread):
             "decode_id": int(decode_id),
             "timestamp_s": float(timestamp_s),
             "data": np.asarray(data, dtype=float),
+            "queue_time": time.perf_counter(),  # 记录入队时间
         }
 
         while True:
@@ -71,15 +82,40 @@ class DecoderThread(threading.Thread):
                 decode_id = payload["decode_id"]
                 data_timestamp_s = payload["timestamp_s"]
                 data = payload["data"]
+                queue_time = payload["queue_time"]
 
+                # 计算队列等待时间
+                queue_wait_ms = (time.perf_counter() - queue_time) * 1000.0
+
+                # 预处理
                 preprocess_start = time.perf_counter()
                 preprocessed = preprocess_data(data, self.fs, self.decoder_cfg)
                 preprocess_time_ms = (time.perf_counter() - preprocess_start) * 1000.0
 
+                # 特征提取 + 解码
                 decode_start = time.perf_counter()
                 featured = extract_feature(preprocessed, self.fs, self.feature_cfg)
                 decode_result = decode(featured, self.model_bundle)
                 decode_time_ms = (time.perf_counter() - decode_start) * 1000.0
+
+                total_pipeline_ms = preprocess_time_ms + decode_time_ms
+
+                # 更新统计
+                self._stats['total_decodes'] += 1
+                self._stats['total_time_ms'] += total_pipeline_ms
+                self._stats['max_preprocess_ms'] = max(self._stats['max_preprocess_ms'], preprocess_time_ms)
+                self._stats['max_decode_ms'] = max(self._stats['max_decode_ms'], decode_time_ms)
+
+                # 性能监控：如果处理时间超过150ms，打印详细信息
+                if self.debug and total_pipeline_ms > 150:
+                    gc_count = gc.get_count()
+                    gc_thresholds = gc.get_threshold()
+                    print(f'[Decoder-SLOW] Decode ID:{decode_id} | '
+                          f'Preprocess:{preprocess_time_ms:.1f}ms | '
+                          f'Decode:{decode_time_ms:.1f}ms | '
+                          f'Total:{total_pipeline_ms:.1f}ms | '
+                          f'QueueWait:{queue_wait_ms:.1f}ms | '
+                          f'GC:{gc_count} | Thresholds:{gc_thresholds}')
 
                 result_payload = {
                     "decode_id": decode_id,
@@ -119,19 +155,44 @@ class DecoderThread(threading.Thread):
 
             self._set_busy(False)
 
+    def get_stats(self):
+        """返回解码线程的统计信息"""
+        if self._stats['total_decodes'] > 0:
+            avg_time = self._stats['total_time_ms'] / self._stats['total_decodes']
+        else:
+            avg_time = 0.0
+
+        return {
+            'total_decodes': self._stats['total_decodes'],
+            'avg_pipeline_ms': round(avg_time, 2),
+            'max_preprocess_ms': round(self._stats['max_preprocess_ms'], 2),
+            'max_decode_ms': round(self._stats['max_decode_ms'], 2),
+        }
+
 
 class StimThread(threading.Thread):
     """Execute short stimulator I/O commands without owning timing policy."""
 
-    def __init__(self, stimulator=None, name="StimThread"):
+    def __init__(self, stimulator=None, name="StimThread", debug=False):
         super().__init__(name=name, daemon=True)
         self.stimulator = stimulator
+        self.debug = debug
 
         self._stop_event = threading.Event()
         self._command_queue = queue.Queue(maxsize=4)
         self._result_queue = queue.Queue(maxsize=20)
         self._busy_lock = threading.Lock()
         self._is_busy = False
+
+        # 性能统计
+        self._stats = {
+            'total_commands': 0,
+            'start_commands': 0,
+            'stop_commands': 0,
+            'failed_commands': 0,
+            'total_time_ms': 0.0,
+            'max_command_time_ms': 0.0,
+        }
 
     def _set_busy(self, value):
         with self._busy_lock:
@@ -158,6 +219,7 @@ class StimThread(threading.Thread):
             "command_type": str(command_type),
             "params": params,
             "command_label": command_label,
+            "queue_time": time.perf_counter(),  # 记录入队时间
         }
 
         try:
@@ -181,6 +243,22 @@ class StimThread(threading.Thread):
             pass
         self._set_busy(False)
 
+    def get_stats(self):
+        """返回刺激线程的统计信息"""
+        if self._stats['total_commands'] > 0:
+            avg_time = self._stats['total_time_ms'] / self._stats['total_commands']
+        else:
+            avg_time = 0.0
+
+        return {
+            'total_commands': self._stats['total_commands'],
+            'start_commands': self._stats['start_commands'],
+            'stop_commands': self._stats['stop_commands'],
+            'failed_commands': self._stats['failed_commands'],
+            'avg_command_ms': round(avg_time, 2),
+            'max_command_ms': round(self._stats['max_command_time_ms'], 2),
+        }
+
     def run(self):
         while not self._stop_event.is_set():
             try:
@@ -192,6 +270,10 @@ class StimThread(threading.Thread):
             command_type = payload["command_type"]
             params = payload["params"]
             command_label = payload["command_label"]
+            queue_time = payload["queue_time"]
+
+            # 计算队列等待时间
+            queue_wait_ms = (time.perf_counter() - queue_time) * 1000.0
 
             if self.stimulator is None or params is None:
                 self._push_result(
@@ -201,33 +283,92 @@ class StimThread(threading.Thread):
                         "command_sent": 0,
                         "command_content": command_label,
                         "error": "stimulator_unavailable",
+                        "queue_wait_ms": round(queue_wait_ms, 2),
                     }
                 )
                 continue
 
             success = 0
             error_message = ""
+            command_start = time.perf_counter()
 
             self._set_busy(True)
             try:
                 if command_type == "start":
+                    # 设置参数
+                    set_params_start = time.perf_counter()
                     params_ok = bool(self.stimulator.set_stimulation_params(params))
+                    set_params_time = (time.perf_counter() - set_params_start) * 1000.0
+
                     if not params_ok:
                         error_message = "set_params_failed"
                     else:
+                        # 启动刺激
+                        start_start = time.perf_counter()
                         success = int(bool(self.stimulator.start_stimulation(channel=params.channel)))
+                        start_time = (time.perf_counter() - start_start) * 1000.0
+
                         if not success:
                             error_message = "start_stim_failed"
+
+                        if self.debug:
+                            total_time = (time.perf_counter() - command_start) * 1000.0
+                            print(f'[StimThread] Start command | Decode ID:{decode_id} | '
+                                  f'SetParams:{set_params_time:.1f}ms | '
+                                  f'Start:{start_time:.1f}ms | '
+                                  f'Total:{total_time:.1f}ms | '
+                                  f'QueueWait:{queue_wait_ms:.1f}ms')
+
+                        self._stats['start_commands'] += 1
+
                 elif command_type == "stop":
+                    stop_start = time.perf_counter()
                     success = int(bool(self.stimulator.stop_stimulation(channel=params.channel)))
+                    stop_time = (time.perf_counter() - stop_start) * 1000.0
+
                     if not success:
                         error_message = "stop_stim_failed"
+
+                    if self.debug:
+                        total_time = (time.perf_counter() - command_start) * 1000.0
+                        print(f'[StimThread] Stop command | Decode ID:{decode_id} | '
+                              f'Stop:{stop_time:.1f}ms | '
+                              f'Total:{total_time:.1f}ms | '
+                              f'QueueWait:{queue_wait_ms:.1f}ms')
+
+                    self._stats['stop_commands'] += 1
                 else:
                     error_message = f"unsupported_command:{command_type}"
+
             except Exception as e:
                 error_message = str(e)
+                success = 0
+                if self.debug:
+                    import traceback
+                    total_time = (time.perf_counter() - command_start) * 1000.0
+                    print(f'[StimThread-ERROR] Decode ID:{decode_id} | '
+                          f'Type:{command_type} | '
+                          f'Error:{e} | '
+                          f'Time:{total_time:.1f}ms')
+                    traceback.print_exc()
             finally:
                 self._set_busy(False)
+
+            # 更新统计
+            total_time = (time.perf_counter() - command_start) * 1000.0
+            self._stats['total_commands'] += 1
+            self._stats['total_time_ms'] += total_time
+            self._stats['max_command_time_ms'] = max(self._stats['max_command_time_ms'], total_time)
+            if success == 0:
+                self._stats['failed_commands'] += 1
+
+            # 性能监控：如果命令执行时间超过500ms，打印警告
+            if total_time > 500:
+                gc_count = gc.get_count()
+                gc_thresholds = gc.get_threshold()
+                print(f'[StimThread-SLOW] Decode ID:{decode_id} | Type:{command_type} | '
+                      f'Time:{total_time:.0f}ms | QueueWait:{queue_wait_ms:.1f}ms | '
+                      f'GC:{gc_count} | Thresholds:{gc_thresholds} | Failed:{success==0}')
 
             self._push_result(
                 {
@@ -236,5 +377,6 @@ class StimThread(threading.Thread):
                     "command_sent": success,
                     "command_content": command_label,
                     "error": error_message,
+                    "queue_wait_ms": round(queue_wait_ms, 2),
                 }
             )
