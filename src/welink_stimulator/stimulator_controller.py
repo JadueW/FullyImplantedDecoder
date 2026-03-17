@@ -183,12 +183,8 @@ class StimulatorController:
         self._lock = threading.RLock()
         self._stim_start_time = 0.0
 
-        # 优化方案1: 参数缓存和异步设置
+        # 优化方案1: 参数缓存（移除异步设置相关代码）
         self._last_params_payload = None  # 缓存最后一次设置的参数payload
-        self._params_setting_in_progress = False  # 标记参数是否正在设置中
-        self._params_async_queue = queue.Queue(maxsize=2)  # 异步参数设置队列
-        self._params_thread = None  # 异步参数设置线程
-        self._stop_event = threading.Event()  # 停止事件
 
         # 激进的GC优化：在初始化时就禁用GC，并提高GC阈值
         self._gc_was_enabled = gc.isenabled()
@@ -243,9 +239,6 @@ class StimulatorController:
                 if self._gc_optimization_enabled:
                     gc.collect()
 
-                # 启动异步参数处理器（优化方案4）
-                self.start_async_params_processor()
-
                 return True
             except Exception as exc:
                 warnings.warn(f'Failed to connect stimulator: {exc}')
@@ -257,9 +250,6 @@ class StimulatorController:
             try:
                 if self.is_stimulating:
                     self.stop_stimulation()
-
-                # 停止异步参数处理器（优化方案4）
-                self.stop_async_params_processor()
 
                 if self.serial_conn and self.serial_conn.is_open:
                     self.serial_conn.close()
@@ -525,7 +515,7 @@ class StimulatorController:
         设置刺激参数，支持参数缓存优化
 
         优化方案1: 如果参数未变，跳过SET_PARAMS命令
-        优化方案4: 异步设置参数，立即返回
+        (移除异步设置，避免竞争条件)
         """
         params = self._normalize_params(params)
         new_payload = params.to_payload()
@@ -540,84 +530,18 @@ class StimulatorController:
         # 更新缓存的payload
         self._last_params_payload = new_payload
 
-        # 优化方案4: 异步设置参数
-        if not self._params_setting_in_progress:
-            # 启动异步参数设置
-            self._params_setting_in_progress = True
-
-            def async_set_params():
-                try:
-                    response = self._send_command(
-                        self.CMD_SET_PARAMS,
-                        new_payload,
-                        expect_response=True,
-                        expected_response_cmd=self.CMD_SET_PARAMS,
-                    )
-                    payload = self._extract_payload(response, expected_cmd=self.CMD_SET_PARAMS)
-                    if payload == new_payload:
-                        with self._lock:
-                            self.current_params = params
-                        if self.debug:
-                            print(f'[Stimulator-优化] 异步SET_PARAMS完成')
-                    else:
-                        if self.debug:
-                            print(f'[Stimulator-优化] 异步SET_PARAMS失败，payload不匹配')
-                except Exception as e:
-                    if self.debug:
-                        print(f'[Stimulator-优化] 异步SET_PARAMS异常: {e}')
-                finally:
-                    self._params_setting_in_progress = False
-
-            # 启动后台线程处理参数设置
-            params_thread = threading.Thread(target=async_set_params, daemon=True)
-            params_thread.start()
-
-            # 立即返回，不等待参数设置完成
-            if self.debug:
-                print(f'[Stimulator-优化] 异步SET_PARAMS已启动，立即返回')
-            return True
-
-        # 如果参数正在设置中，将新请求放入队列
-        try:
-            self._params_async_queue.put_nowait(params)
-            if self.debug:
-                print(f'[Stimulator-优化] 参数正在设置，新请求已入队')
-            return True
-        except queue.Full:
-            if self.debug:
-                print(f'[Stimulator-优化] 参数队列已满，丢弃设置请求')
-            return False
-
-    def start_async_params_processor(self):
-        """启动异步参数设置处理器（优化方案4的补充）"""
-        def process_params_queue():
-            while not self._stop_event.is_set():
-                try:
-                    params = self._params_async_queue.get(timeout=0.1)
-                    # 设置最新队列中的参数
-                    self.set_stimulation_params(params)
-                except queue.Empty:
-                    continue
-                except Exception as e:
-                    if self.debug:
-                        print(f'[Stimulator-优化] 参数队列处理异常: {e}')
-
-        self._params_thread = threading.Thread(
-            target=process_params_queue,
-            name="AsyncParamsProcessor",
-            daemon=True
+        # 同步设置参数（确保参数生效后再返回）
+        response = self._send_command(
+            self.CMD_SET_PARAMS,
+            new_payload,
+            expect_response=True,
+            expected_response_cmd=self.CMD_SET_PARAMS,
         )
-        self._params_thread.start()
-        if self.debug:
-            print(f'[Stimulator-优化] 异步参数处理器已启动')
-
-    def stop_async_params_processor(self):
-        """停止异步参数设置处理器"""
-        if self._params_thread and self._params_thread.is_alive():
-            self._stop_event.set()
-            self._params_thread.join(timeout=1.0)
-            if self.debug:
-                print(f'[Stimulator-优化] 异步参数处理器已停止')
+        payload = self._extract_payload(response, expected_cmd=self.CMD_SET_PARAMS)
+        if payload == new_payload:
+            self.current_params = params
+            return True
+        return False
 
     def start_stimulation(self, duration_ms=None, channel=None):
         channel_name = str(channel or getattr(self.current_params, 'channel', 'AB')).upper()

@@ -2,6 +2,7 @@ import queue
 import threading
 import time
 import gc
+from datetime import datetime
 
 import numpy as np
 
@@ -276,6 +277,11 @@ class StimThread(threading.Thread):
             queue_wait_ms = (time.perf_counter() - queue_time) * 1000.0
 
             if self.stimulator is None or params is None:
+                error_reason = "stimulator未连接" if self.stimulator is None else "参数为空"
+                timestamp_str = datetime.now().strftime("[%H:%M:%S]")
+                print(f'{timestamp_str} ❌ stimulator {command_type} 失败 | decode_id:{decode_id} | '
+                      f'错误:{error_reason} | 命令:{command_label}')
+
                 self._push_result(
                     {
                         "decode_id": decode_id,
@@ -295,29 +301,46 @@ class StimThread(threading.Thread):
             self._set_busy(True)
             try:
                 if command_type == "start":
-                    # 设置参数
+                    # 设置参数（同步设置，确保参数生效）
                     set_params_start = time.perf_counter()
                     params_ok = bool(self.stimulator.set_stimulation_params(params))
                     set_params_time = (time.perf_counter() - set_params_start) * 1000.0
 
                     if not params_ok:
                         error_message = "set_params_failed"
+                        # 打印参数设置失败信息
+                        timestamp_str = datetime.now().strftime("[%H:%M:%S]")
+                        print(f'{timestamp_str} ❌ stimulator start 失败 | decode_id:{decode_id} | '
+                              f'错误:set_params_failed | 耗时:{set_params_time:.1f}ms')
                     else:
                         # 启动刺激
                         start_start = time.perf_counter()
                         success = int(bool(self.stimulator.start_stimulation(channel=params.channel)))
                         start_time = (time.perf_counter() - start_start) * 1000.0
+                        total_time = (time.perf_counter() - command_start) * 1000.0
 
                         if not success:
                             error_message = "start_stim_failed"
+                            # 打印启动失败信息
+                            timestamp_str = datetime.now().strftime("[%H:%M:%S]")
+                            print(f'{timestamp_str} ❌ stimulator start 失败 | decode_id:{decode_id} | '
+                                  f'错误:start_stim_failed | 参数设置:{set_params_time:.1f}ms | '
+                                  f'启动尝试:{start_time:.1f}ms | 总耗时:{total_time:.1f}ms')
+                        else:
+                            # 打印启动成功信息
+                            timestamp_str = datetime.now().strftime("[%H:%M:%S]")
+                            channel_info = params.channel if hasattr(params, 'channel') else 'AB'
+                            print(f'{timestamp_str} ✅ stimulator start 成功 | decode_id:{decode_id} | '
+                                  f'通道:{channel_info} | 参数设置:{set_params_time:.1f}ms | '
+                                  f'启动刺激:{start_time:.1f}ms | 总耗时:{total_time:.1f}ms | '
+                                  f'队列等待:{queue_wait_ms:.1f}ms')
 
                         if self.debug:
-                            total_time = (time.perf_counter() - command_start) * 1000.0
-                            print(f'[StimThread] Start command | Decode ID:{decode_id} | '
-                                  f'SetParams:{set_params_time:.1f}ms | '
-                                  f'Start:{start_time:.1f}ms | '
-                                  f'Total:{total_time:.1f}ms | '
-                                  f'QueueWait:{queue_wait_ms:.1f}ms')
+                            print(f'[StimThread-调试] Start命令详情 | Decode ID:{decode_id} | '
+                                  f'参数设置:{set_params_time:.1f}ms | '
+                                  f'启动刺激:{start_time:.1f}ms | '
+                                  f'总计:{total_time:.1f}ms | '
+                                  f'队列等待:{queue_wait_ms:.1f}ms')
 
                         self._stats['start_commands'] += 1
 
@@ -325,13 +348,24 @@ class StimThread(threading.Thread):
                     stop_start = time.perf_counter()
                     success = int(bool(self.stimulator.stop_stimulation(channel=params.channel)))
                     stop_time = (time.perf_counter() - stop_start) * 1000.0
+                    total_time = (time.perf_counter() - command_start) * 1000.0
 
                     if not success:
                         error_message = "stop_stim_failed"
+                        # 打印停止失败信息
+                        timestamp_str = datetime.now().strftime("[%H:%M:%S]")
+                        print(f'{timestamp_str} ❌ stimulator stop 失败 | decode_id:{decode_id} | '
+                              f'错误:stop_stim_failed | 停止尝试:{stop_time:.1f}ms | 总耗时:{total_time:.1f}ms')
+                    else:
+                        # 打印停止成功信息
+                        timestamp_str = datetime.now().strftime("[%H:%M:%S]")
+                        channel_info = params.channel if hasattr(params, 'channel') else 'AB'
+                        print(f'{timestamp_str} ✅ stimulator stop 成功 | decode_id:{decode_id} | '
+                              f'通道:{channel_info} | 停止刺激:{stop_time:.1f}ms | 总耗时:{total_time:.1f}ms | '
+                              f'队列等待:{queue_wait_ms:.1f}ms')
 
                     if self.debug:
-                        total_time = (time.perf_counter() - command_start) * 1000.0
-                        print(f'[StimThread] Stop command | Decode ID:{decode_id} | '
+                        print(f'[StimThread-调试] Stop命令详情 | Decode ID:{decode_id} | '
                               f'Stop:{stop_time:.1f}ms | '
                               f'Total:{total_time:.1f}ms | '
                               f'QueueWait:{queue_wait_ms:.1f}ms')
@@ -339,14 +373,24 @@ class StimThread(threading.Thread):
                     self._stats['stop_commands'] += 1
                 else:
                     error_message = f"unsupported_command:{command_type}"
+                    # 打印不支持的命令信息
+                    timestamp_str = datetime.now().strftime("[%H:%M:%S]")
+                    print(f'{timestamp_str} ❌ stimulator 不支持命令 | decode_id:{decode_id} | '
+                          f'命令类型:{command_type} | 错误:{error_message}')
 
             except Exception as e:
                 error_message = str(e)
                 success = 0
+                total_time = (time.perf_counter() - command_start) * 1000.0
+
+                # 打印异常信息
+                timestamp_str = datetime.now().strftime("[%H:%M:%S]")
+                print(f'{timestamp_str} ❌ stimulator {command_type} 异常 | decode_id:{decode_id} | '
+                      f'错误:{e} | 耗时:{total_time:.1f}ms')
+
                 if self.debug:
                     import traceback
-                    total_time = (time.perf_counter() - command_start) * 1000.0
-                    print(f'[StimThread-ERROR] Decode ID:{decode_id} | '
+                    print(f'[StimThread-调试] 异常详情 | Decode ID:{decode_id} | '
                           f'Type:{command_type} | '
                           f'Error:{e} | '
                           f'Time:{total_time:.1f}ms')
