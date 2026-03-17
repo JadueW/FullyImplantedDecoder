@@ -1,7 +1,9 @@
 import joblib
 import numpy as np
+from functools import lru_cache
 
 
+@lru_cache(maxsize=8)
 def load_model(model_path):
     return joblib.load(model_path)
 
@@ -27,8 +29,20 @@ def _get_class_labels(model_obj, estimator):
     return None
 
 
-def build_model(model_bundle):
+@lru_cache(maxsize=8)
+def load_built_model(model_path):
+    model_bundle = load_model(model_path)
+    estimator = _get_estimator(model_bundle)
+    class_labels = _get_class_labels(model_bundle, estimator)
 
+    return {
+        'model': estimator,
+        'class_labels': class_labels,
+        'raw_bundle': model_bundle
+    }
+
+
+def build_model(model_bundle):
     estimator = _get_estimator(model_bundle)
     class_labels = _get_class_labels(model_bundle, estimator)
 
@@ -62,7 +76,6 @@ def _build_probability_dict(probabilities, class_labels):
 
 
 def predict_from_features(feature_data, model_obj):
-
     built = build_model(model_obj)
     estimator = built['model']
     class_labels = built['class_labels']
@@ -70,11 +83,7 @@ def predict_from_features(feature_data, model_obj):
 
     predicted_indices = estimator.predict(features)
     has_proba = hasattr(estimator, 'predict_proba')
-
-    if has_proba:
-        proba = estimator.predict_proba(features)
-    else:
-        proba = None
+    proba = estimator.predict_proba(features) if has_proba else None
 
     results = []
     for idx, predicted in enumerate(predicted_indices):
@@ -96,15 +105,60 @@ def predict_from_features(feature_data, model_obj):
 
         results.append(result)
 
-    if squeeze_output:
-        return results[0]
-    return results
+    return results[0] if squeeze_output else results
+
+
+def predict_from_features_with_path(feature_data, model_path):
+    built = load_built_model(model_path)
+    estimator = built['model']
+    class_labels = built['class_labels']
+    features, squeeze_output = _prepare_feature_array(feature_data)
+
+    predicted_indices = estimator.predict(features)
+    has_proba = hasattr(estimator, 'predict_proba')
+    proba = estimator.predict_proba(features) if has_proba else None
+
+    results = []
+    for idx, predicted in enumerate(predicted_indices):
+        predicted_label = predicted.item() if hasattr(predicted, 'item') else predicted
+        result = {
+            'predicted_target': predicted_label,
+            'probabilities': {},
+            'confidence': None,
+            'method': 'ml_decoder',
+            'success': True
+        }
+
+        if proba is not None:
+            prob_row = proba[idx]
+            result['probabilities'] = _build_probability_dict(prob_row, class_labels)
+            result['confidence'] = float(np.max(prob_row))
+        else:
+            result['confidence'] = 1.0
+
+        results.append(result)
+
+    return results[0] if squeeze_output else results
 
 
 def decode(feature_data, model_obj):
-
     results = predict_from_features(feature_data, model_obj)
     confidence_threshold = 0.45
+
+    def apply_threshold(result):
+        result = dict(result)
+        result['success'] = result['confidence'] >= confidence_threshold
+        return result
+
+    if isinstance(results, list):
+        return [apply_threshold(result) for result in results]
+    return apply_threshold(results)
+
+
+def decode_with_path(feature_data, model_path):
+    results = predict_from_features_with_path(feature_data, model_path)
+    confidence_threshold = 0.45
+
     def apply_threshold(result):
         result = dict(result)
         result['success'] = result['confidence'] >= confidence_threshold

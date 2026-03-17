@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.signal import butter, iirnotch, sosfiltfilt, tf2sos
-
+from functools import lru_cache
 
 def normalize_preprocess_config(preprocess_config):
     if 'preprocess' in preprocess_config:
@@ -17,6 +17,33 @@ def normalize_preprocess_config(preprocess_config):
     normalized.setdefault('bandpass_order', 4)
     normalized.setdefault('use_car', False)
     return normalized
+
+
+def _config_to_key(preprocess_config):
+    normalized = normalize_preprocess_config(preprocess_config)
+    return (
+        tuple(normalized['notch_freqs']),
+        normalized['notch_bandwidth'],
+        normalized['bandpass_low'],
+        normalized['bandpass_high'],
+        normalized['bandpass_order']
+    )
+
+@lru_cache(maxsize=32)
+def _build_filter_sos_cached(fs,config_key):
+    """ 创建滤波相关缓存 """
+    notch_freqs, bandwidth, lowcut, highcut, order = config_key
+
+    notch_parts = [
+        design_notch_sos(freq, bandwidth, fs)
+        for freq in notch_freqs
+    ]
+
+    bandpass_sos = design_bandpass_sos(lowcut, highcut, fs, order)
+
+    if notch_parts:
+        return np.vstack(notch_parts + [bandpass_sos])
+    return bandpass_sos
 
 
 def common_average_reference(data_array):
@@ -67,11 +94,12 @@ def preprocess_data(data, fs, preprocess_config):
             "or (n_windows, n_channels, n_timepoints)."
         )
 
-    total_sos = _build_filter_sos(fs, preprocess_config)
+    config_key = _config_to_key(preprocess_config)
+    total_sos = _build_filter_sos_cached(fs, config_key)
     filtered = sosfiltfilt(total_sos, data, axis=-1)
 
-    # if preprocess_config.get('use_car', False):
-    #     filtered = common_average_reference(filtered)
+    if preprocess_config.get('use_car', False):
+        filtered = common_average_reference(filtered)
 
     return filtered
 
