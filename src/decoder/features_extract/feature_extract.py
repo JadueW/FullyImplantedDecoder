@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 import numpy as np
 from scipy.signal import welch
 
@@ -13,7 +15,47 @@ def build_feature_layout(feature_config, n_channels):
     return {
         'n_channels': n_channels,
         'feature_order': list(feature_config['feature_order']),
-        'bands': dict(feature_config['bands'])
+        'bands': dict(feature_config['bands']),
+    }
+
+
+def _feature_config_to_key(feature_config):
+    feature_config = normalize_feature_config(feature_config)
+    return (
+        feature_config['nperseg'],
+        feature_config['noverlap'],
+        feature_config.get('nfft'),
+        tuple(feature_config['total_power_range']),
+        bool(feature_config.get('use_log_abs_power', True)),
+        tuple(feature_config['feature_order']),
+        tuple(
+            (band_name, tuple(band_range))
+            for band_name, band_range in sorted(feature_config['bands'].items())
+        ),
+    )
+
+
+def _feature_config_from_key(config_key):
+    (
+        nperseg,
+        noverlap,
+        nfft,
+        total_power_range,
+        use_log_abs_power,
+        feature_order,
+        bands,
+    ) = config_key
+    return {
+        'nperseg': nperseg,
+        'noverlap': noverlap,
+        'nfft': nfft,
+        'total_power_range': list(total_power_range),
+        'use_log_abs_power': use_log_abs_power,
+        'feature_order': list(feature_order),
+        'bands': {
+            band_name: list(band_range)
+            for band_name, band_range in bands
+        },
     }
 
 
@@ -34,21 +76,54 @@ def _safe_band_mean(psd, mask):
     return np.mean(psd[:, mask], axis=1)
 
 
-def _compute_sample_features(sample, fs, feature_config, masks, total_mask):
-    feature_config = normalize_feature_config(feature_config)
+@lru_cache(maxsize=32)
+def _build_feature_plan_cached(fs, n_channels, config_key):
+    feature_config = _feature_config_from_key(config_key)
+    nperseg = feature_config['nperseg']
+    noverlap = feature_config['noverlap']
+    nfft = feature_config.get('nfft')
+
+    # Welch 频率轴仅由参数决定，适合缓存成可复用 plan。
+    dummy_sample = np.zeros((n_channels, nperseg), dtype=float)
+    freqs, _ = welch(
+        dummy_sample,
+        fs=fs,
+        nperseg=nperseg,
+        noverlap=noverlap,
+        nfft=nfft,
+        axis=-1,
+    )
+    masks, total_mask = _prepare_masks(freqs, feature_config)
+
+    return {
+        'config': feature_config,
+        'masks': masks,
+        'total_mask': total_mask,
+        'layout': build_feature_layout(feature_config, n_channels),
+    }
+
+
+def prepare_feature_plan(fs, feature_config, n_channels):
+    config_key = _feature_config_to_key(feature_config)
+    return _build_feature_plan_cached(float(fs), int(n_channels), config_key)
+
+
+def _compute_sample_features(sample, fs, feature_plan):
+    feature_config = feature_plan['config']
     _, psd = welch(
         sample,
         fs=fs,
         nperseg=feature_config['nperseg'],
         noverlap=feature_config['noverlap'],
-        axis=-1
+        nfft=feature_config.get('nfft'),
+        axis=-1,
     )
     eps = np.finfo(float).eps
-    total_power = _safe_band_mean(psd, total_mask)
+    total_power = _safe_band_mean(psd, feature_plan['total_mask'])
     total_power = np.maximum(total_power, eps)
 
-    beta_power = _safe_band_mean(psd, masks['beta'])
-    high_gamma_power = _safe_band_mean(psd, masks['high_gamma'])
+    beta_power = _safe_band_mean(psd, feature_plan['masks']['beta'])
+    high_gamma_power = _safe_band_mean(psd, feature_plan['masks']['high_gamma'])
     beta_power = np.maximum(beta_power, eps)
     high_gamma_power = np.maximum(high_gamma_power, eps)
 
@@ -66,14 +141,12 @@ def _compute_sample_features(sample, fs, feature_config, masks, total_mask):
         'beta_abs_psd': beta_abs,
         'beta_rel_psd': beta_rel,
         'high_gamma_abs_psd': high_gamma_abs,
-        'high_gamma_rel_psd': high_gamma_rel
+        'high_gamma_rel_psd': high_gamma_rel,
     }
     return np.concatenate([block_map[name] for name in feature_config['feature_order']])
 
 
-def extract_feature(data, fs, feature_config, return_metadata=False):
-
-    feature_config = normalize_feature_config(feature_config)
+def extract_feature(data, fs, feature_config=None, return_metadata=False, feature_plan=None):
     data = np.asarray(data, dtype=float)
 
     if data.ndim == 2:
@@ -89,20 +162,17 @@ def extract_feature(data, fs, feature_config, return_metadata=False):
         )
 
     n_channels = samples.shape[1]
-    freqs, _ = welch(
-        samples[0],
-        fs=fs,
-        nperseg=feature_config['nperseg'],
-        noverlap=feature_config['noverlap'],
-        axis=-1
-    )
-    masks, total_mask = _prepare_masks(freqs, feature_config)
+    if feature_plan is None:
+        if feature_config is None:
+            raise ValueError("feature_config is required when feature_plan is not provided.")
+        feature_plan = prepare_feature_plan(fs, feature_config, n_channels)
+
     feature_rows = [
-        _compute_sample_features(sample, fs, feature_config, masks, total_mask)
+        _compute_sample_features(sample, fs, feature_plan)
         for sample in samples
     ]
     feature_array = np.asarray(feature_rows, dtype=float)
-    feature_layout = build_feature_layout(feature_config, n_channels)
+    feature_layout = feature_plan['layout']
 
     if squeeze_output:
         feature_array = feature_array[0]
