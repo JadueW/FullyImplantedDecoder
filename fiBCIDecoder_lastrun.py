@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2024.2.5),
-    on 三月 18, 2026, at 14:40
+    on 三月 18, 2026, at 17:40
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -1006,11 +1006,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         # Run 'Begin Routine' code from br_code
         br_sound_dir = os.path.join(sound_dir, block_audio_name)
         
-        #
-        br_text.setText(block_stimuli)
-        br_sound.setSound(br_sound_dir, secs=8, hamming=True)
-        br_sound.setVolume(1.0, log=False)
-        br_sound.seek(0)
         
         br_text.setText(block_stimuli)
         br_sound.setSound(br_sound_dir, secs=8, hamming=True)
@@ -1309,13 +1304,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             tr_tex = stimuli
             tr_sound_dir = os.path.join(sound_dir, audio_name)
             
-            
-            #
             print_timeline("ROUTINE-TRIAL_READY-BEGIN", f"text={tr_tex} | audio={audio_name}")
-            tr_text.setText(tr_tex)
-            tr_sound.setSound(tr_sound_dir, secs=3, hamming=True)
-            tr_sound.setVolume(1.0, log=False)
-            tr_sound.seek(0)
+            
             
             tr_text.setText(tr_tex)
             tr_sound.setSound(tr_sound_dir, secs=3, hamming=True)
@@ -2431,12 +2421,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         # Run 'Begin Routine' code from bo_code
         bo_tex = "回合结束\n请休息"
         bo_sound_dir = os.path.join(sound_dir, "回合结束_请休息.wav")
-        
-        #
-        bo_text.setText(bo_tex)
-        bo_sound.setSound(bo_sound_dir, secs=3, hamming=True)
-        bo_sound.setVolume(1.0, log=False)
-        bo_sound.seek(0)
         
         bo_text.setText(bo_tex)
         bo_sound.setSound(bo_sound_dir, secs=3, hamming=True)
