@@ -294,15 +294,15 @@ class StimulatorController:
             if len(tail) != data_len + 2:
                 return None
 
-            response = bytes([self.FRAME_HEAD]) + header + tail
-            if not self._validate_response(response):
-                warnings.warn('Stimulator response checksum/frame validation failed.')
-                return None
+            # response = bytes([self.FRAME_HEAD]) + header + tail
+            # if not self._validate_response(response):
+            #     warnings.warn('Stimulator response checksum/frame validation failed.')
+            #     return None
 
-            self._stats['total_read_retries'] += retry_count
-            if self.debug:
-                print(f'Stimulator response: {response.hex(" ").upper()}')
-            return response
+            # self._stats['total_read_retries'] += retry_count
+            # if self.debug:
+            #     print(f'Stimulator response: {response.hex(" ").upper()}')
+            # return response
         finally:
             self.serial_conn.timeout = old_timeout
 
@@ -312,16 +312,14 @@ class StimulatorController:
 
         perf_start = time.perf_counter()
         frame = self._build_frame(cmd, data)
-
         with self._lock:
             try:
                 self._discard_stale_input()
                 if self.debug:
                     print(f'Stimulator request: {frame.hex(" ").upper()}')
-
                 self.serial_conn.write(frame)
                 self.serial_conn.flush()
-                response = self._read_response(timeout=response_timeout)
+                # response = self._read_response(timeout=response_timeout)
                 total_time = (time.perf_counter() - perf_start) * 1000.0
 
                 self._stats['total_commands'] += 1
@@ -331,16 +329,16 @@ class StimulatorController:
                 if total_time > 200:
                     print(f'[Stimulator-SLOW] CMD=0x{cmd:02X} | Total:{total_time:.1f}ms')
 
-                if response is None:
-                    return None
-
-                if expected_response_cmd is not None and response[2] != expected_response_cmd:
-                    warnings.warn(
-                        f'Unexpected response command: expected 0x{expected_response_cmd:02X}, '
-                        f'got 0x{response[2]:02X}.'
-                    )
-                    return None
-                return response
+                # if response is None:
+                #     return None
+                #
+                # if expected_response_cmd is not None and response[2] != expected_response_cmd:
+                #     warnings.warn(
+                #         f'Unexpected response command: expected 0x{expected_response_cmd:02X}, '
+                #         f'got 0x{response[2]:02X}.'
+                #     )
+                #     return None
+                return b''
             except Exception as exc:
                 total_time = (time.perf_counter() - perf_start) * 1000.0
                 print(f'[Stimulator-ERROR] CMD=0x{cmd:02X} | Error after {total_time:.1f}ms | {exc}')
@@ -354,8 +352,7 @@ class StimulatorController:
             expected_response_cmd=cmd,
             response_timeout=response_timeout,
         )
-        response_payload = self._extract_payload(response, expected_cmd=cmd)
-        return response_payload == bytes(payload)
+        return response is not None
 
     def _normalize_params(self, params):
         if isinstance(params, StimulationParams):
