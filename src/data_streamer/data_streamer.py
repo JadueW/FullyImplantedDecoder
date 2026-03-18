@@ -6,7 +6,7 @@ import numpy as np
 
 from src.decoder.features_extract.feature_extract import extract_feature, prepare_feature_plan
 from src.decoder.online_inference.ml_decoder.ml_decoder import decode
-from src.decoder.preprocess.preprocessor import preprocess_data
+from src.decoder.preprocess.preprocessor import get_preprocess_output_fs, preprocess_data
 
 
 def _queue_put_latest(target_queue, payload):
@@ -57,7 +57,9 @@ class DecoderThread(_BaseWorkerThread):
         self.model_bundle = model_bundle
         self.debug = debug
         self._feature_plan = None
+        self._feature_plan_fs = None
         self._feature_plan_channels = None
+        self._processed_fs = get_preprocess_output_fs(self.fs, self.decoder_cfg)
         self._stats = {
             'total_decodes': 0,
             'total_time_ms': 0.0,
@@ -77,9 +79,14 @@ class DecoderThread(_BaseWorkerThread):
     def decode_stop(self):
         self._stop_event.set()
 
-    def _ensure_feature_plan(self, n_channels):
-        if self._feature_plan is None or self._feature_plan_channels != n_channels:
-            self._feature_plan = prepare_feature_plan(self.fs, self.feature_cfg, n_channels)
+    def _ensure_feature_plan(self, processed_fs, n_channels):
+        if (
+            self._feature_plan is None
+            or self._feature_plan_fs != processed_fs
+            or self._feature_plan_channels != n_channels
+        ):
+            self._feature_plan = prepare_feature_plan(processed_fs, self.feature_cfg, n_channels)
+            self._feature_plan_fs = processed_fs
             self._feature_plan_channels = n_channels
         return self._feature_plan
 
@@ -88,6 +95,8 @@ class DecoderThread(_BaseWorkerThread):
             'decode_id': payload.get('decode_id', -1),
             'data_received_time_s': round(payload.get('timestamp_s', 0.0), 6),
             'data_shape': tuple(payload.get('data', np.array([])).shape),
+            'downsample_shape': None,
+            'processed_fs': None,
             'preprocess_time_ms': None,
             'feature_time_ms': None,
             'model_infer_time_ms': None,
@@ -113,12 +122,17 @@ class DecoderThread(_BaseWorkerThread):
         queue_wait_ms = (time.perf_counter() - payload['queue_time']) * 1000.0
 
         preprocess_start = time.perf_counter()
-        preprocessed = preprocess_data(data, self.fs, self.decoder_cfg)
+        preprocessed, processed_fs = preprocess_data(
+            data,
+            self.fs,
+            self.decoder_cfg,
+            return_fs=True,
+        )
         preprocess_time_ms = (time.perf_counter() - preprocess_start) * 1000.0
 
         feature_start = time.perf_counter()
-        feature_plan = self._ensure_feature_plan(preprocessed.shape[-2])
-        featured = extract_feature(preprocessed, self.fs, feature_plan=feature_plan)
+        feature_plan = self._ensure_feature_plan(processed_fs, preprocessed.shape[-2])
+        featured = extract_feature(preprocessed, processed_fs, feature_plan=feature_plan)
         feature_time_ms = (time.perf_counter() - feature_start) * 1000.0
 
         model_infer_start = time.perf_counter()
@@ -144,6 +158,8 @@ class DecoderThread(_BaseWorkerThread):
             'decode_id': decode_id,
             'data_received_time_s': round(payload['timestamp_s'], 6),
             'data_shape': tuple(data.shape),
+            'downsample_shape': tuple(preprocessed.shape),
+            'processed_fs': round(float(processed_fs), 3),
             'preprocess_time_ms': round(preprocess_time_ms, 3),
             'feature_time_ms': round(feature_time_ms, 3),
             'model_infer_time_ms': round(model_infer_time_ms, 3),
@@ -200,6 +216,9 @@ class StimThread(_BaseWorkerThread):
             'command_label': command_label,
             'queue_time': time.perf_counter(),
         }
+        if payload['command_type'] == 'stop':
+            return _queue_put_latest(self._input_queue, payload)
+
         try:
             self._input_queue.put_nowait(payload)
             return True
@@ -214,6 +233,26 @@ class StimThread(_BaseWorkerThread):
         except Exception:
             pass
         self._set_busy(False)
+
+    def force_stop_now(self, decode_id=-1, params=None, command_label='force_stop'):
+        payload = {
+            'decode_id': int(decode_id),
+            'command_type': 'stop',
+            'params': params,
+            'command_label': command_label,
+            'queue_time': time.perf_counter(),
+        }
+        self._set_busy(True)
+        try:
+            result_payload = self._execute(payload)
+        except Exception as exc:
+            result_payload = self._build_result(payload, False, str(exc))
+        finally:
+            self._set_busy(False)
+
+        self._update_stats(result_payload['command_time_ms'], bool(result_payload['command_sent']))
+        self._push_result(result_payload)
+        return bool(result_payload['command_sent'])
 
     def _build_result(self, payload, success, error="", queue_wait_ms=0.0, command_time_ms=0.0):
         return {

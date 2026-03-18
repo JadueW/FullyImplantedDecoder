@@ -381,11 +381,11 @@ class StimulatorController:
             raise ValueError(f'Unsupported channel: {channel_name}')
         return channel_name
 
-    def set_stimulation_params(self, params):
+    def set_stimulation_params(self, params, force_send=False):
         params = self._normalize_params(params)
         payload = params.to_payload()
 
-        if self._last_params_payload == payload:
+        if (not force_send) and self._last_params_payload == payload:
             self.current_params = params
             return True
 
@@ -396,8 +396,13 @@ class StimulatorController:
         return False
 
     def start_stimulation(self, params=None, duration_ms=None, channel=None):
-        if params is not None and not self.set_stimulation_params(params):
-            return False
+        active_params = params
+        if active_params is None:
+            active_params = self.current_params
+
+        if active_params is not None:
+            if not self.set_stimulation_params(active_params, force_send=True):
+                return False
 
         if self.current_params is None:
             warnings.warn('start_stimulation() requires valid stimulation params. Send 0x31 first.')
