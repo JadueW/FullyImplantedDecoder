@@ -1,6 +1,8 @@
-import numpy as np
-from scipy.signal import butter, iirnotch, sosfiltfilt, tf2sos
 from functools import lru_cache
+
+import numpy as np
+from scipy.signal import butter, iirnotch, resample_poly, sosfiltfilt, tf2sos
+
 
 def normalize_preprocess_config(preprocess_config):
     if 'preprocess' in preprocess_config:
@@ -16,6 +18,8 @@ def normalize_preprocess_config(preprocess_config):
     normalized.setdefault('notch_bandwidth', 2.0)
     normalized.setdefault('bandpass_order', 4)
     normalized.setdefault('use_car', False)
+    normalized.setdefault('downsample_fs', None)
+    normalized.setdefault('downsample_order', 4)
     return normalized
 
 
@@ -26,24 +30,37 @@ def _config_to_key(preprocess_config):
         normalized['notch_bandwidth'],
         normalized['bandpass_low'],
         normalized['bandpass_high'],
-        normalized['bandpass_order']
+        normalized['bandpass_order'],
+        normalized['downsample_fs'],
+        normalized['downsample_order'],
     )
 
+
+def get_preprocess_output_fs(fs, preprocess_config):
+    normalized = normalize_preprocess_config(preprocess_config)
+    down_fs = normalized.get('downsample_fs')
+    if down_fs is None:
+        return float(fs)
+    down_fs = float(down_fs)
+    if down_fs <= 0:
+        raise ValueError('downsample_fs must be positive when provided.')
+    if down_fs > fs:
+        raise ValueError('downsample_fs should not be greater than fs.')
+    return down_fs
+
+
 @lru_cache(maxsize=32)
-def _build_filter_sos_cached(fs,config_key):
-    """ 创建滤波相关缓存 """
-    notch_freqs, bandwidth, lowcut, highcut, order = config_key
-
-    notch_parts = [
-        design_notch_sos(freq, bandwidth, fs)
-        for freq in notch_freqs
-    ]
-
+def _build_filter_sos_cached(fs, config_key):
+    notch_freqs, bandwidth, lowcut, highcut, order, _, _ = config_key
+    notch_parts = [design_notch_sos(freq, bandwidth, fs) for freq in notch_freqs]
     bandpass_sos = design_bandpass_sos(lowcut, highcut, fs, order)
+    return np.vstack(notch_parts + [bandpass_sos]) if notch_parts else bandpass_sos
 
-    if notch_parts:
-        return np.vstack(notch_parts + [bandpass_sos])
-    return bandpass_sos
+
+@lru_cache(maxsize=16)
+def _build_downsample_sos_cached(fs, down_fs, order):
+    cutoff = 0.8 * (float(down_fs) / 2.0)
+    return butter(order, cutoff, btype='low', fs=fs, output='sos')
 
 
 def common_average_reference(data_array):
@@ -64,27 +81,30 @@ def design_bandpass_sos(lowcut, highcut, fs, order):
     return butter(order, [low, high], btype='band', output='sos')
 
 
-def _build_filter_sos(fs, preprocess_config):
-    preprocess_config = normalize_preprocess_config(preprocess_config)
-    notch_freqs = preprocess_config['notch_freqs']
-    bandwidth = preprocess_config['notch_bandwidth']
-    lowcut = preprocess_config['bandpass_low']
-    highcut = preprocess_config['bandpass_high']
-    order = preprocess_config['bandpass_order']
+def down_sampling(data_array, fs, down_fs, order=4):
+    data_array = np.asarray(data_array, dtype=float)
+    fs = float(fs)
+    down_fs = float(down_fs)
 
-    notch_parts = [
-        design_notch_sos(freq, bandwidth, fs)
-        for freq in notch_freqs
-    ]
-    bandpass_sos = design_bandpass_sos(lowcut, highcut, fs, order)
+    if down_fs <= 0 or fs <= 0:
+        raise ValueError('fs and down_fs must be positive.')
+    if down_fs > fs:
+        raise ValueError('down_fs should not be greater than fs.')
+    if np.isclose(down_fs, fs):
+        return data_array
 
-    if notch_parts:
-        return np.vstack(notch_parts + [bandpass_sos])
-    return bandpass_sos
+    ratio = fs / down_fs
+    factor = int(round(ratio))
+
+    if np.isclose(ratio, factor):
+        downsample_sos = _build_downsample_sos_cached(fs, down_fs, int(order))
+        filtered = sosfiltfilt(downsample_sos, data_array, axis=-1)
+        return filtered[..., ::factor]
+
+    return resample_poly(data_array, int(round(down_fs)), int(round(fs)), axis=-1)
 
 
-def preprocess_data(data, fs, preprocess_config):
-
+def preprocess_data(data, fs, preprocess_config, return_fs=False):
     preprocess_config = normalize_preprocess_config(preprocess_config)
     data = np.asarray(data, dtype=float)
 
@@ -101,5 +121,15 @@ def preprocess_data(data, fs, preprocess_config):
     if preprocess_config.get('use_car', False):
         filtered = common_average_reference(filtered)
 
-    return filtered
+    output_fs = get_preprocess_output_fs(fs, preprocess_config)
+    if not np.isclose(output_fs, fs):
+        filtered = down_sampling(
+            filtered,
+            fs=fs,
+            down_fs=output_fs,
+            order=preprocess_config.get('downsample_order', 4),
+        )
 
+    if return_fs:
+        return filtered, output_fs
+    return filtered
