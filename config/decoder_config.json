@@ -15,7 +15,9 @@
     "bandpass_order": 4,
     "notch_freqs": [50, 100, 150],
     "notch_bandwidth": 2.0,
-    "use_car": false
+    "use_car": false,
+    "downsample_fs": 500,
+    "downsample_order": 4
   },
   "features": {
     "nperseg": 512,

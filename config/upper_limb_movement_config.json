@@ -36,6 +36,7 @@
 		"task_desc":{"0":"粗大","1":"精细"},
 		"task_type":0,
         "random_seed": 42,
+        "stim_duration_ms": 500,
 		"sound_dir": "D:\\dev\\FullyImplantedDecoder\\resources\\audios\\upper_limb_movement",
 		"video_dir": "D:\\dev\\FullyImplantedDecoder\\resources\\videos\\upperlimb",
         "video_direction":"right",
