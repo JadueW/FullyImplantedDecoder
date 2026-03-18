@@ -1,11 +1,13 @@
+import threading
 import time
 import warnings
 from dataclasses import asdict, dataclass, field
-import threading
-import gc
-import queue
 
 import serial
+
+
+def _clamp(value, low, high):
+    return max(low, min(high, int(value)))
 
 
 @dataclass
@@ -17,14 +19,33 @@ class ChannelStimConfig:
 
     def normalized(self):
         return ChannelStimConfig(
-            route=max(0, min(7, int(self.route))),
-            prescription_id=max(1, min(13, int(self.prescription_id))),
-            level=max(1, min(32, int(self.level))),
-            duration_code=max(1, min(3, int(self.duration_code))),
+            route=_clamp(self.route, 0, 7),
+            prescription_id=_clamp(self.prescription_id, 1, 13),
+            level=_clamp(self.level, 1, 32),
+            duration_code=_clamp(self.duration_code, 1, 3),
         )
 
     def to_dict(self):
         return asdict(self.normalized())
+
+
+def _build_channel_config(params, prefix):
+    prefix_key = f'{prefix}_'
+    return ChannelStimConfig(
+        route=params.get(f'{prefix_key}route', params.get('route', 0)),
+        prescription_id=params.get(
+            f'{prefix_key}prescription_id',
+            params.get('prescription_id', params.get('pulse_width', 1)),
+        ),
+        level=params.get(
+            f'{prefix_key}level',
+            params.get('level', params.get('current_ma', 1)),
+        ),
+        duration_code=params.get(
+            f'{prefix_key}duration_code',
+            params.get('duration_code', params.get('duration_min', 1)),
+        ),
+    )
 
 
 @dataclass
@@ -40,51 +61,8 @@ class StimulationParams:
 
         params = dict(mapping)
         channel = str(params.get('channel', 'A')).upper()
-
-        if 'a' in params and isinstance(params['a'], dict):
-            a_cfg = ChannelStimConfig(**params['a'])
-        else:
-            a_cfg = ChannelStimConfig(
-                route=params.get('a_route', params.get('route', 0)),
-                prescription_id=params.get(
-                    'a_prescription_id',
-                    params.get(
-                        'prescription_id',
-                        params.get('pulse_width', 1),
-                    ),
-                ),
-                level=params.get(
-                    'a_level',
-                    params.get('level', params.get('current_ma', 1)),
-                ),
-                duration_code=params.get(
-                    'a_duration_code',
-                    params.get('duration_code', params.get('duration_min', 1)),
-                ),
-            )
-
-        if 'b' in params and isinstance(params['b'], dict):
-            b_cfg = ChannelStimConfig(**params['b'])
-        else:
-            b_cfg = ChannelStimConfig(
-                route=params.get('b_route', params.get('route', 0)),
-                prescription_id=params.get(
-                    'b_prescription_id',
-                    params.get(
-                        'prescription_id',
-                        params.get('pulse_width', 1),
-                    ),
-                ),
-                level=params.get(
-                    'b_level',
-                    params.get('level', params.get('current_ma', 1)),
-                ),
-                duration_code=params.get(
-                    'b_duration_code',
-                    params.get('duration_code', params.get('duration_min', 1)),
-                ),
-            )
-
+        a_cfg = ChannelStimConfig(**params['a']) if isinstance(params.get('a'), dict) else _build_channel_config(params, 'a')
+        b_cfg = ChannelStimConfig(**params['b']) if isinstance(params.get('b'), dict) else _build_channel_config(params, 'b')
         return cls(channel=channel, a=a_cfg, b=b_cfg)
 
     def normalized(self):
@@ -98,20 +76,21 @@ class StimulationParams:
             b=self.b.normalized(),
         )
 
+    def _inactive_channel_config(self):
+        return ChannelStimConfig(route=0, prescription_id=1, level=1, duration_code=1)
+
     def to_payload(self):
         normalized = self.normalized()
-        selector = StimulatorController.CHANNEL_MAP[normalized.channel]
-
         a_cfg = normalized.a
         b_cfg = normalized.b
 
         if normalized.channel == 'A':
-            b_cfg = ChannelStimConfig(route=0, prescription_id=1, level=1, duration_code=1)
+            b_cfg = self._inactive_channel_config()
         elif normalized.channel == 'B':
-            a_cfg = ChannelStimConfig(route=0, prescription_id=1, level=1, duration_code=1)
+            a_cfg = self._inactive_channel_config()
 
         return bytes([
-            selector,
+            StimulatorController.CHANNEL_MAP[normalized.channel],
             a_cfg.route,
             a_cfg.prescription_id,
             a_cfg.level,
@@ -168,7 +147,7 @@ class StimulatorController:
         0x03: 30,
     }
 
-    def __init__(self, port, baudrate=230400, timeout=0.05, debug=True):
+    def __init__(self, port, baudrate=115200, timeout=0.05, debug=True):
         self.port = port
         self.baudrate = baudrate
         self.timeout = timeout
@@ -182,35 +161,13 @@ class StimulatorController:
 
         self._lock = threading.RLock()
         self._stim_start_time = 0.0
-
-        # 优化方案1: 参数缓存（移除异步设置相关代码）
-        self._last_params_payload = None  # 缓存最后一次设置的参数payload
-
-        # 激进的GC优化：在初始化时就禁用GC，并提高GC阈值
-        self._gc_was_enabled = gc.isenabled()
-        self._gc_optimization_enabled = True
-
-        # 设置更高的GC阈值，减少GC频率
-        if self._gc_optimization_enabled:
-            # 设置更高的阈值：(threshold0, threshold1, threshold2)
-            # 默认是(700, 10, 10)，我们设置为(10000, 100, 100)
-            gc.set_threshold(10000, 100, 100)
-            # 在初始化时进行一次彻底的GC
-            gc.collect()
-
-        # 预分配缓冲区以减少对象创建压力
-        self._read_buffer = bytearray(512)
-        self._frame_buffer = bytearray(512)
-
-        # 性能统计
+        self._last_params_payload = None
         self._stats = {
             'total_commands': 0,
             'total_read_retries': 0,
             'total_discarded_bytes': 0,
             'total_time_ms': 0.0,
             'max_command_time_ms': 0.0,
-            'gc_pause_count': 0,  # GC暂停次数统计
-            'gc_pause_time_ms': 0.0,  # GC暂停总时间
         }
 
     def connect(self):
@@ -234,11 +191,6 @@ class StimulatorController:
                 self.serial_conn.reset_input_buffer()
                 self.serial_conn.reset_output_buffer()
                 self.is_connected = True
-
-                # 连接成功后进行一次彻底的GC
-                if self._gc_optimization_enabled:
-                    gc.collect()
-
                 return True
             except Exception as exc:
                 warnings.warn(f'Failed to connect stimulator: {exc}')
@@ -250,10 +202,8 @@ class StimulatorController:
             try:
                 if self.is_stimulating:
                     self.stop_stimulation()
-
                 if self.serial_conn and self.serial_conn.is_open:
                     self.serial_conn.close()
-
                 self.serial_conn = None
                 self.is_connected = False
                 return True
@@ -282,76 +232,7 @@ class StimulatorController:
             return False
         if response[0] != self.FRAME_HEAD or response[-1] != self.FRAME_TAIL:
             return False
-
-        checksum = response[-2]
-        expected_checksum = self._calculate_checksum(response[:-2])
-        return checksum == expected_checksum
-
-    def _read_response(self, timeout=None):
-        """读取刺激器响应，添加性能监控和超时检测"""
-        if not self.serial_conn or not self.serial_conn.is_open:
-            return None
-
-        old_timeout = self.serial_conn.timeout
-        if timeout is not None:
-            self.serial_conn.timeout = timeout
-
-        read_start = time.perf_counter()
-        retry_count = 0
-        max_retries = 100  # 防止无限循环
-
-        try:
-            # 等待帧头（添加超时检测）
-            while retry_count < max_retries:
-                retry_count += 1
-                head = self.serial_conn.read(1)
-                if not head:
-                    # 读取超时
-                    elapsed = (time.perf_counter() - read_start) * 1000
-                    if self.debug and elapsed > 50:
-                        print(f'[Stimulator-Read] Retry #{retry_count} after {elapsed:.0f}ms - No data')
-                    continue
-                if head[0] == self.FRAME_HEAD:
-                    break
-
-            if retry_count >= max_retries:
-                elapsed = (time.perf_counter() - read_start) * 1000
-                print(f'[Stimulator-Read-Timeout] Max retries ({max_retries}) reached after {elapsed:.0f}ms')
-                return None
-
-            # 读取header
-            header = self.serial_conn.read(4)
-            if len(header) < 4:
-                elapsed = (time.perf_counter() - read_start) * 1000
-                print(f'[Stimulator-Read-Error] Header incomplete after {elapsed:.0f}ms')
-                return None
-
-            _, _, len_h, len_l = header
-            data_len = (len_h << 8) | len_l
-
-            # 读取数据+尾部
-            tail = self.serial_conn.read(data_len + 2)
-            if len(tail) < data_len + 2:
-                elapsed = (time.perf_counter() - read_start) * 1000
-                print(f'[Stimulator-Read-Error] Tail incomplete after {elapsed:.0f}ms (expected {data_len+2}, got {len(tail)})')
-                return None
-
-            response = bytes([self.FRAME_HEAD]) + header + tail
-            read_time = (time.perf_counter() - read_start) * 1000
-
-            if self.debug:
-                print(f'Stimulator response: {response.hex(" ").upper()} | Time: {read_time:.1f}ms')
-
-            if not self._validate_response(response):
-                warnings.warn('Stimulator response checksum/frame validation failed.')
-                return None
-
-            # 更新统计
-            self._stats['total_read_retries'] += retry_count
-
-            return response
-        finally:
-            self.serial_conn.timeout = old_timeout
+        return response[-2] == self._calculate_checksum(response[:-2])
 
     def _extract_payload(self, response, expected_cmd=None):
         if not response:
@@ -362,17 +243,15 @@ class StimulatorController:
                 f'got 0x{response[2]:02X}.'
             )
             return None
-
         data_len = (response[3] << 8) | response[4]
         return response[5:5 + data_len]
 
     def _discard_stale_input(self):
-        """丢弃串口缓冲区中的陈旧数据，添加性能监控"""
         if not self.serial_conn or not self.serial_conn.is_open:
             return
 
         try:
-            waiting = int(getattr(self.serial_conn, "in_waiting", 0))
+            waiting = int(getattr(self.serial_conn, 'in_waiting', 0))
         except Exception:
             waiting = 0
 
@@ -381,122 +260,102 @@ class StimulatorController:
 
         try:
             stale_bytes = self.serial_conn.read(waiting)
-            discarded = len(stale_bytes)
-            self._stats['total_discarded_bytes'] += discarded
-
+            self._stats['total_discarded_bytes'] += len(stale_bytes)
             if self.debug and stale_bytes:
-                print(f'Discarded stale stimulator bytes: {stale_bytes.hex(" ").upper()} ({discarded} bytes)')
-            elif discarded > 10:
-                print(f'[Stimulator] Discarded {discarded} stale bytes')
+                print(f'Discarded stale stimulator bytes: {stale_bytes.hex(" ").upper()}')
         except Exception as exc:
             warnings.warn(f'Failed to discard stale stimulator input: {exc}')
 
-    def _send_command(
-        self,
-        cmd,
-        data=b'',
-        expect_response=True,
-        response_timeout=None,
-        expected_response_cmd=None,
-    ):
-        """发送命令到刺激器，添加详细的性能监控"""
+    def _read_response(self, timeout=None):
+        if not self.serial_conn or not self.serial_conn.is_open:
+            return None
+
+        old_timeout = self.serial_conn.timeout
+        if timeout is not None:
+            self.serial_conn.timeout = timeout
+
+        retry_count = 0
+        try:
+            while True:
+                retry_count += 1
+                head = self.serial_conn.read(1)
+                if not head:
+                    return None
+                if head[0] == self.FRAME_HEAD:
+                    break
+
+            header = self.serial_conn.read(4)
+            if len(header) != 4:
+                return None
+
+            _, _, len_h, len_l = header
+            data_len = (len_h << 8) | len_l
+            tail = self.serial_conn.read(data_len + 2)
+            if len(tail) != data_len + 2:
+                return None
+
+            response = bytes([self.FRAME_HEAD]) + header + tail
+            if not self._validate_response(response):
+                warnings.warn('Stimulator response checksum/frame validation failed.')
+                return None
+
+            self._stats['total_read_retries'] += retry_count
+            if self.debug:
+                print(f'Stimulator response: {response.hex(" ").upper()}')
+            return response
+        finally:
+            self.serial_conn.timeout = old_timeout
+
+    def _send_command(self, cmd, data=b'', expected_response_cmd=None, response_timeout=None):
         if not self.is_connected and not self.connect():
             return None
 
-        # 性能监控开始
         perf_start = time.perf_counter()
-
         frame = self._build_frame(cmd, data)
-        if self.debug:
-            print(f'Stimulator request: {frame.hex(" ").upper()}')
 
         with self._lock:
             try:
-                if expect_response:
-                    discard_start = time.perf_counter()
-                    self._discard_stale_input()
-                    discard_time = (time.perf_counter() - discard_start) * 1000
-                else:
-                    discard_time = 0
+                self._discard_stale_input()
+                if self.debug:
+                    print(f'Stimulator request: {frame.hex(" ").upper()}')
 
-                # 写入命令
-                write_start = time.perf_counter()
                 self.serial_conn.write(frame)
                 self.serial_conn.flush()
-                write_time = (time.perf_counter() - write_start) * 1000
+                response = self._read_response(timeout=response_timeout)
+                total_time = (time.perf_counter() - perf_start) * 1000.0
 
-                if not expect_response:
-                    total_time = (time.perf_counter() - perf_start) * 1000
-                    if total_time > 20:
-                        print(f'[Stimulator] CMD=0x{cmd:02X} | Write:{write_time:.1f}ms | Total:{total_time:.1f}ms')
-                    return b''
-
-                deadline = None
-                if response_timeout is not None:
-                    deadline = time.perf_counter() + float(response_timeout)
-
-                # 读取响应（添加超时监控）
-                read_start = time.perf_counter()
-                response = None
-                loop_count = 0
-
-                while True:
-                    loop_count += 1
-                    remaining = None
-                    if deadline is not None:
-                        remaining = deadline - time.perf_counter()
-                        if remaining <= 0:
-                            break
-
-                    response = self._read_response(timeout=remaining)
-                    if response is None:
-                        break
-
-                    if expected_response_cmd is None or response[2] == expected_response_cmd:
-                        break
-
-                    # 处理延迟的响应
-                    if (
-                        expected_response_cmd == self.CMD_SET_PARAMS
-                        and response[2] == self.CMD_START_STOP
-                    ):
-                        if self.debug:
-                            print(
-                                "Discarded stale 0x32 response before expected 0x31 response."
-                            )
-                        continue
-
-                    warnings.warn(
-                        f'Unexpected response command: expected 0x{expected_response_cmd:02X}, '
-                        f'got 0x{response[2]:02X}; skipping stale response.'
-                    )
-
-                read_time = (time.perf_counter() - read_start) * 1000
-                total_time = (time.perf_counter() - perf_start) * 1000
-
-                # 更新统计
                 self._stats['total_commands'] += 1
                 self._stats['total_time_ms'] += total_time
                 self._stats['max_command_time_ms'] = max(self._stats['max_command_time_ms'], total_time)
 
-                # 性能监控：如果总时间超过200ms，打印详细信息
                 if total_time > 200:
-                    gc_count = gc.get_count()
-                    gc_thresholds = gc.get_threshold()
-                    print(f'[Stimulator-SLOW] CMD=0x{cmd:02X} | '
-                          f'Write:{write_time:.1f}ms | '
-                          f'Discard:{discard_time:.1f}ms | '
-                          f'Read:{read_time:.1f}ms (loops={loop_count}) | '
-                          f'Total:{total_time:.1f}ms | '
-                          f'GC_count:{gc_count} | '
-                          f'GC_thresholds:{gc_thresholds}')
+                    print(f'[Stimulator-SLOW] CMD=0x{cmd:02X} | Total:{total_time:.1f}ms')
 
+                if response is None:
+                    return None
+
+                if expected_response_cmd is not None and response[2] != expected_response_cmd:
+                    warnings.warn(
+                        f'Unexpected response command: expected 0x{expected_response_cmd:02X}, '
+                        f'got 0x{response[2]:02X}.'
+                    )
+                    return None
                 return response
             except Exception as exc:
-                total_time = (time.perf_counter() - perf_start) * 1000
+                total_time = (time.perf_counter() - perf_start) * 1000.0
                 print(f'[Stimulator-ERROR] CMD=0x{cmd:02X} | Error after {total_time:.1f}ms | {exc}')
                 warnings.warn(f'Failed to send stimulator command: {exc}')
                 return None
+
+    def _send_echo_command(self, cmd, payload, response_timeout=None):
+        response = self._send_command(
+            cmd,
+            payload,
+            expected_response_cmd=cmd,
+            response_timeout=response_timeout,
+        )
+        response_payload = self._extract_payload(response, expected_cmd=cmd)
+        return response_payload == bytes(payload)
 
     def _normalize_params(self, params):
         if isinstance(params, StimulationParams):
@@ -510,48 +369,43 @@ class StimulatorController:
             return StimulationParams.from_mapping(params).normalized()
         raise TypeError('params must be a StimulationParams or dict.')
 
+    def _resolve_channel_name(self, channel=None):
+        if channel is not None:
+            channel_name = str(channel).upper()
+        elif self.current_params is not None:
+            channel_name = self.current_params.channel
+        else:
+            channel_name = 'AB'
+
+        if channel_name not in self.CHANNEL_MAP:
+            raise ValueError(f'Unsupported channel: {channel_name}')
+        return channel_name
+
     def set_stimulation_params(self, params):
-        """
-        设置刺激参数，支持参数缓存优化
-
-        优化方案1: 如果参数未变，跳过SET_PARAMS命令
-        (移除异步设置，避免竞争条件)
-        """
         params = self._normalize_params(params)
-        new_payload = params.to_payload()
+        payload = params.to_payload()
 
-        # 优化方案1: 参数缓存检查
-        if self._last_params_payload == new_payload:
-            if self.debug:
-                print(f'[Stimulator-优化] 参数未变，跳过SET_PARAMS (payload相同)')
+        if self._last_params_payload == payload:
             self.current_params = params
             return True
 
-        # 更新缓存的payload
-        self._last_params_payload = new_payload
-
-        # 同步设置参数（确保参数生效后再返回）
-        response = self._send_command(
-            self.CMD_SET_PARAMS,
-            new_payload,
-            expect_response=True,
-            expected_response_cmd=self.CMD_SET_PARAMS,
-        )
-        payload = self._extract_payload(response, expected_cmd=self.CMD_SET_PARAMS)
-        if payload == new_payload:
+        if self._send_echo_command(self.CMD_SET_PARAMS, payload):
+            self._last_params_payload = payload
             self.current_params = params
             return True
         return False
 
-    def start_stimulation(self, duration_ms=None, channel=None):
-        channel_name = str(channel or getattr(self.current_params, 'channel', 'AB')).upper()
-        channel_code = self.CHANNEL_MAP.get(channel_name, 0xFF)
-        response = self._send_command(
-            self.CMD_START_STOP,
-            bytes([0x01, channel_code]),
-            expect_response=False,
-        )
-        if response is None:
+    def start_stimulation(self, params=None, duration_ms=None, channel=None):
+        if params is not None and not self.set_stimulation_params(params):
+            return False
+
+        if self.current_params is None:
+            warnings.warn('start_stimulation() requires valid stimulation params. Send 0x31 first.')
+            return False
+
+        channel_name = self._resolve_channel_name(channel)
+        payload = bytes([0x01, self.CHANNEL_MAP[channel_name]])
+        if not self._send_echo_command(self.CMD_START_STOP, payload):
             return False
 
         self.is_stimulating = True
@@ -564,49 +418,26 @@ class StimulatorController:
         return True
 
     def stop_stimulation(self, channel=None):
-        channel_name = str(channel or getattr(self.current_params, 'channel', 'AB')).upper()
-        channel_code = self.CHANNEL_MAP.get(channel_name, 0xFF)
-        expected_payload = bytes([0x00, channel_code])
-        response = self._send_command(
-            self.CMD_START_STOP,
-            expected_payload,
-            expect_response=False,
-        )
-        if response is None:
+        channel_name = self._resolve_channel_name(channel)
+        payload = bytes([0x00, self.CHANNEL_MAP[channel_name]])
+        if not self._send_echo_command(self.CMD_START_STOP, payload):
             return False
 
         self.is_stimulating = False
         return True
 
     def switch_channel(self, channel, a_route=0, b_route=0):
-        channel_name = str(channel).upper()
-        if channel_name not in self.CHANNEL_MAP:
-            raise ValueError(f'Unsupported channel: {channel}')
-
+        channel_name = self._resolve_channel_name(channel)
         payload = bytes([
             self.CHANNEL_MAP[channel_name],
-            max(0, min(7, int(a_route))),
-            max(0, min(7, int(b_route))),
+            _clamp(a_route, 0, 7),
+            _clamp(b_route, 0, 7),
         ])
-        response = self._send_command(
-            self.CMD_SWITCH_CHANNEL,
-            payload,
-            expect_response=True,
-            expected_response_cmd=self.CMD_SWITCH_CHANNEL,
-        )
-        response_payload = self._extract_payload(response, expected_cmd=self.CMD_SWITCH_CHANNEL)
-        return response_payload == payload
+        return self._send_echo_command(self.CMD_SWITCH_CHANNEL, payload)
 
     def set_level_limit(self, enabled):
         payload = bytes([0x01 if bool(enabled) else 0x00])
-        response = self._send_command(
-            self.CMD_LEVEL_LIMIT,
-            payload,
-            expect_response=True,
-            expected_response_cmd=self.CMD_LEVEL_LIMIT,
-        )
-        response_payload = self._extract_payload(response, expected_cmd=self.CMD_LEVEL_LIMIT)
-        if response_payload == payload:
+        if self._send_echo_command(self.CMD_LEVEL_LIMIT, payload):
             self.level_limit_enabled = bool(enabled)
             return True
         return False
@@ -619,14 +450,7 @@ class StimulatorController:
         return False
 
     def send_command_with_duration(self, params, duration_ms):
-        params = self._normalize_params(params)
-        if not self.set_stimulation_params(params):
-            return False
-        warnings.warn(
-            'send_command_with_duration() now only sends set_params + start. '
-            'The caller must send stop_stimulation() after the desired duration.'
-        )
-        return self.start_stimulation(channel=params.channel)
+        return self.start_stimulation(params=params, duration_ms=duration_ms)
 
     def execute_command(self, command):
         if isinstance(command, dict):
@@ -642,21 +466,19 @@ class StimulatorController:
         if command.command_type == 'set_params':
             return self.set_stimulation_params(command.params)
         if command.command_type == 'start':
-            return self.send_command_with_duration(command.params, command.duration_ms)
+            return self.start_stimulation(params=command.params, duration_ms=command.duration_ms)
         if command.command_type == 'stop':
             return self.stop_stimulation(channel=command.params.channel)
-
         raise ValueError(f'Unsupported command_type: {command.command_type}')
 
     def query_status(self):
-        response = self._send_command(self.CMD_STATUS, b'', expect_response=True)
+        response = self._send_command(self.CMD_STATUS, b'', expected_response_cmd=self.CMD_STATUS)
         payload = self._extract_payload(response, expected_cmd=self.CMD_STATUS)
         if payload is None or len(payload) != 18:
             return None
 
         hardware_status = (payload[1] << 8) | payload[2]
         battery_mv = (payload[3] << 8) | payload[4]
-
         return {
             'work_state': payload[0],
             'is_stimulating': payload[0] == 0x01,
@@ -686,7 +508,7 @@ class StimulatorController:
         }
 
     def query_version(self):
-        response = self._send_command(self.CMD_VERSION, b'', expect_response=True)
+        response = self._send_command(self.CMD_VERSION, b'', expected_response_cmd=self.CMD_VERSION)
         payload = self._extract_payload(response, expected_cmd=self.CMD_VERSION)
         if payload is None or len(payload) != 7:
             return None
@@ -695,7 +517,6 @@ class StimulatorController:
         protocol_major = protocol_raw // 100
         protocol_minor = (protocol_raw % 100) // 10
         protocol_patch = protocol_raw % 10
-
         return {
             'protocol_raw': protocol_raw,
             'protocol_version': f'v{protocol_major}.{protocol_minor}.{protocol_patch}',
@@ -711,10 +532,7 @@ class StimulatorController:
         return False
 
     def power_off(self):
-        payload = bytes([0x00])
-        response = self._send_command(self.CMD_POWER, payload, expect_response=True)
-        response_payload = self._extract_payload(response, expected_cmd=self.CMD_POWER)
-        return response_payload == payload
+        return self._send_echo_command(self.CMD_POWER, bytes([0x00]))
 
     def get_info(self):
         return {
@@ -730,7 +548,6 @@ class StimulatorController:
         }
 
     def get_stats(self):
-        """返回性能统计信息"""
         if self._stats['total_commands'] > 0:
             avg_time = self._stats['total_time_ms'] / self._stats['total_commands']
             avg_retries = self._stats['total_read_retries'] / self._stats['total_commands']
