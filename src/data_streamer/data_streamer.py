@@ -6,7 +6,7 @@ from datetime import datetime
 
 import numpy as np
 
-from src.decoder.features_extract.feature_extract import extract_feature
+from src.decoder.features_extract.feature_extract import extract_feature, prepare_feature_plan
 from src.decoder.online_inference.ml_decoder.ml_decoder import decode
 from src.decoder.preprocess.preprocessor import preprocess_data
 
@@ -20,6 +20,8 @@ class DecoderThread(threading.Thread):
         self.feature_cfg = feature_cfg
         self.model_bundle = model_bundle
         self.debug = debug
+        self._feature_plan = None
+        self._feature_plan_channels = None
 
         self._stop_event = threading.Event()
         self._input_queue = queue.Queue(maxsize=1)
@@ -95,7 +97,16 @@ class DecoderThread(threading.Thread):
 
                 # 特征提取 + 解码
                 decode_start = time.perf_counter()
-                featured = extract_feature(preprocessed, self.fs, self.feature_cfg)
+                n_channels = preprocessed.shape[-2]
+                if self._feature_plan is None or self._feature_plan_channels != n_channels:
+                    self._feature_plan = prepare_feature_plan(self.fs, self.feature_cfg, n_channels)
+                    self._feature_plan_channels = n_channels
+
+                featured = extract_feature(
+                    preprocessed,
+                    self.fs,
+                    feature_plan=self._feature_plan,
+                )
                 decode_result = decode(featured, self.model_bundle)
                 decode_time_ms = (time.perf_counter() - decode_start) * 1000.0
 
