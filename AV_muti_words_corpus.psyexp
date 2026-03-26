@@ -1,0 +1,612 @@
+﻿<?xml version="1.0" ?>
+<PsychoPy2experiment encoding="utf-8" version="2024.2.5">
+  <Settings>
+    <Param val="3" valType="str" updates="None" name="Audio latency priority"/>
+    <Param val="ptb" valType="str" updates="None" name="Audio lib"/>
+    <Param val="" valType="str" updates="None" name="Completed URL"/>
+    <Param val="auto" valType="str" updates="None" name="Data file delimiter"/>
+    <Param val="u'data/%s_%s_%s' % (expInfo['participant'], expName, expInfo['date'])" valType="code" updates="None" name="Data filename"/>
+    <Param val="True" valType="bool" updates="None" name="Enable Escape"/>
+    <Param val="Thank you for your patience." valType="str" updates="None" name="End Message"/>
+    <Param val="{'participant': 'f&quot;{randint(0, 999999):06.0f}&quot;', 'session': '001'}" valType="code" updates="None" name="Experiment info"/>
+    <Param val="True" valType="bool" updates="None" name="Force stereo"/>
+    <Param val="True" valType="bool" updates="None" name="Full-screen window"/>
+    <Param val="" valType="str" updates="None" name="HTML path"/>
+    <Param val="" valType="str" updates="None" name="Incomplete URL"/>
+    <Param val="testMonitor" valType="str" updates="None" name="Monitor"/>
+    <Param val="[]" valType="list" updates="None" name="Resources"/>
+    <Param val="True" valType="bool" updates="None" name="Save csv file"/>
+    <Param val="True" valType="bool" updates="None" name="Save excel file"/>
+    <Param val="False" valType="bool" updates="None" name="Save hdf5 file"/>
+    <Param val="True" valType="bool" updates="None" name="Save log file"/>
+    <Param val="True" valType="bool" updates="None" name="Save psydat file"/>
+    <Param val="True" valType="bool" updates="None" name="Save wide csv file"/>
+    <Param val="2" valType="num" updates="None" name="Screen"/>
+    <Param val="False" valType="bool" updates="None" name="Show info dlg"/>
+    <Param val="False" valType="bool" updates="None" name="Show mouse"/>
+    <Param val="height" valType="str" updates="None" name="Units"/>
+    <Param val="" valType="str" updates="None" name="Use version"/>
+    <Param val="[2048, 1280]" valType="list" updates="None" name="Window size (pixels)"/>
+    <Param val="none" valType="str" updates="None" name="backgroundFit"/>
+    <Param val="" valType="str" updates="None" name="backgroundImg"/>
+    <Param val="avg" valType="str" updates="None" name="blendMode"/>
+    <Param val="float" valType="str" updates="None" name="clockFormat"/>
+    <Param val="{'thisRow.t': 'priority.CRITICAL', 'expName': 'priority.LOW'}" valType="dict" updates="None" name="colPriority"/>
+    <Param val="-1.0000, -1.0000, -1.0000" valType="color" updates="None" name="color"/>
+    <Param val="rgb" valType="str" updates="None" name="colorSpace"/>
+    <Param val="warning" valType="code" updates="None" name="consoleLoggingLevel"/>
+    <Param val="default" valType="str" updates="None" name="ecSampleRate"/>
+    <Param val="100.1.1.1" valType="str" updates="None" name="elAddress"/>
+    <Param val="FILTER_LEVEL_2" valType="str" updates="None" name="elDataFiltering"/>
+    <Param val="FILTER_LEVEL_OFF" valType="str" updates="None" name="elLiveFiltering"/>
+    <Param val="EYELINK 1000 DESKTOP" valType="str" updates="None" name="elModel"/>
+    <Param val="ELLIPSE_FIT" valType="str" updates="None" name="elPupilAlgorithm"/>
+    <Param val="PUPIL_AREA" valType="str" updates="None" name="elPupilMeasure"/>
+    <Param val="1000" valType="num" updates="None" name="elSampleRate"/>
+    <Param val="False" valType="bool" updates="None" name="elSimMode"/>
+    <Param val="RIGHT_EYE" valType="str" updates="None" name="elTrackEyes"/>
+    <Param val="PUPIL_CR_TRACKING" valType="str" updates="None" name="elTrackingMode"/>
+    <Param val="speech_exp" valType="str" updates="None" name="expName"/>
+    <Param val="on Sync" valType="str" updates="None" name="exportHTML"/>
+    <Param val="None" valType="str" updates="None" name="eyetracker"/>
+    <Param val="" valType="code" updates="None" name="frameRate"/>
+    <Param val="+" valType="str" updates="None" name="frameRateMsg"/>
+    <Param val="127.0.0.1" valType="str" updates="None" name="gpAddress"/>
+    <Param val="4242" valType="num" updates="None" name="gpPort"/>
+    <Param val="ioHub" valType="str" updates="None" name="keyboardBackend"/>
+    <Param val="info" valType="code" updates="None" name="logging level"/>
+    <Param val="True" valType="bool" updates="None" name="measureFrameRate"/>
+    <Param val="('MIDDLE_BUTTON',)" valType="list" updates="None" name="mgBlink"/>
+    <Param val="CONTINUOUS" valType="str" updates="None" name="mgMove"/>
+    <Param val="0.5" valType="num" updates="None" name="mgSaccade"/>
+    <Param val="neon.local" valType="str" updates="None" name="plCompanionAddress"/>
+    <Param val="8080" valType="num" updates="None" name="plCompanionPort"/>
+    <Param val="True" valType="bool" updates="None" name="plCompanionRecordingEnabled"/>
+    <Param val="0.6" valType="num" updates="None" name="plConfidenceThreshold"/>
+    <Param val="True" valType="bool" updates="None" name="plPupilCaptureRecordingEnabled"/>
+    <Param val="" valType="str" updates="None" name="plPupilCaptureRecordingLocation"/>
+    <Param val="127.0.0.1" valType="str" updates="None" name="plPupilRemoteAddress"/>
+    <Param val="50020" valType="num" updates="None" name="plPupilRemotePort"/>
+    <Param val="1000" valType="num" updates="None" name="plPupilRemoteTimeoutMs"/>
+    <Param val="False" valType="bool" updates="None" name="plPupillometryOnly"/>
+    <Param val="psychopy_iohub_surface" valType="str" updates="None" name="plSurfaceName"/>
+    <Param val="1" valType="code" updates="None" name="runMode"/>
+    <Param val="False" valType="bool" updates="None" name="rush"/>
+    <Param val="time" valType="str" updates="None" name="sortColumns"/>
+    <Param val="" valType="str" updates="None" name="tbLicenseFile"/>
+    <Param val="" valType="str" updates="None" name="tbModel"/>
+    <Param val="60" valType="num" updates="None" name="tbSampleRate"/>
+    <Param val="" valType="str" updates="None" name="tbSerialNo"/>
+    <Param val="pyglet" valType="str" updates="None" name="winBackend"/>
+  </Settings>
+  <Routines>
+    <Routine name="initialization">
+      <RoutineSettingsComponent name="initialization" plugin="None">
+        <Param val="none" valType="str" updates="None" name="backgroundFit"/>
+        <Param val="" valType="str" updates="None" name="backgroundImg"/>
+        <Param val="$[0,0,0]" valType="color" updates="None" name="color"/>
+        <Param val="rgb" valType="str" updates="None" name="colorSpace"/>
+        <Param val="" valType="str" updates="constant" name="desc"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="False" valType="code" updates="None" name="forceNonSlip"/>
+        <Param val="initialization" valType="code" updates="None" name="name"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="constant" name="skipIf"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="False" valType="bool" updates="None" name="useWindowParams"/>
+      </RoutineSettingsComponent>
+      <CodeComponent name="init_device" plugin="None">
+        <Param val="import json&amp;#10;import warnings&amp;#10;import time&amp;#10;&amp;#10;from src.transmission.trans_control.dataController import DataController&amp;#10;from src.peripheral.camera.MultiCamThreadRecord import (&amp;#10;    init_camera_thread,&amp;#10;    start_camera_thread,&amp;#10;    exit_camera_thread&amp;#10;)&amp;#10;from src.peripheral.audio.AudioThreadRecord import (&amp;#10;    init_audio_thread,&amp;#10;    start_audio_thread,&amp;#10;    exit_audio_thread&amp;#10;)&amp;#10;&amp;#10;from src.utils.exit_handler import patch_core_quit, register_cleanup_function&amp;#10;&amp;#10;config_path = os.path.join('./config', 'sentence_reading_config.json')&amp;#10;&amp;#10;try:&amp;#10;    with open(config_path, 'r', encoding='utf-8') as f:&amp;#10;        config = json.load(f)&amp;#10;    logging.info(f&quot;✓ Config loaded from {config_path}&quot;)&amp;#10;except Exception as e:&amp;#10;    logging.error(f&quot;✗ Failed to load config: {e}&quot;)&amp;#10;    config = {}&amp;#10;    warnings.warn(&quot;Using default configuration values&quot;)&amp;#10;&amp;#10;host = config.get(&quot;experiment&quot;, {}).get(&quot;host&quot;, &quot;127.0.0.1&quot;)&amp;#10;port = config.get(&quot;experiment&quot;, {}).get(&quot;port&quot;, 5001)&amp;#10;&amp;#10;big_text_size = config.get(&quot;experiment&quot;, {}).get(&quot;big_text_size&quot;, 0.25)&amp;#10;small_text_size = config.get(&quot;experiment&quot;, {}).get(&quot;small_text_size&quot;, 0.25)&amp;#10;&amp;#10;trial_repeats = config.get(&quot;experiment&quot;, {}).get(&quot;trial_repetas&quot;, 1)&amp;#10;block_repeats = config.get(&quot;experiment&quot;, {}).get(&quot;block_repeats&quot;, 1)&amp;#10;&amp;#10;task_type = config.get(&quot;experiment&quot;, {}).get(&quot;task_type&quot;, 1)&amp;#10;task_desc = config.get(&quot;experiment&quot;, {}).get(&quot;task_desc&quot;, {&quot;1&quot;: &quot;语句跟读&quot;})&amp;#10;&amp;#10;if task_type == 1:&amp;#10;    selected_rows = config.get(&quot;experiment&quot;, {}).get(&quot;selected_rows&quot;,&quot;0:10&quot;)&amp;#10;    task_num = 10&amp;#10;else:&amp;#10;    print(&quot;WARNING: 任务类型只能为1.&quot;)&amp;#10;&amp;#10;conditions_file = config.get(&quot;experiment&quot;, {}).get(&amp;#10;    &quot;conditions&quot;,&amp;#10;    r&quot;.\resources\conditions\sentence_reading\expanded_sentences.csv&quot;&amp;#10;)&amp;#10;&amp;#10;sound_dir = config.get(&quot;experiment&quot;, {}).get(&amp;#10;    &quot;sound_dir&quot;,&amp;#10;    r&quot;.\resources\audios\sentence_reading&quot;&amp;#10;)&amp;#10;&amp;#10;random_seed = config.get(&quot;experiment&quot;, {}).get(&quot;random_seed&quot;, 42)&amp;#10;&amp;#10;camera_connected_status = config.get(&quot;peripheral_stats&quot;, {}).get(&amp;#10;    &quot;is_camera_connected&quot;, False&amp;#10;)&amp;#10;audio_connected_status = config.get(&quot;peripheral_stats&quot;, {}).get(&amp;#10;    &quot;is_audio_connected&quot;, False&amp;#10;)&amp;#10;&amp;#10;dc = None&amp;#10;try:&amp;#10;    dc = DataController(host, port, 4, 2000)&amp;#10;    dc.connect()&amp;#10;    dc.start()&amp;#10;    dc.setBufferSize(10)&amp;#10;    logging.info(&quot;✓ DataController initialized and started&quot;)&amp;#10;except Exception as e:&amp;#10;    logging.error(f&quot;✗ DataController initialization failed: {e}&quot;)&amp;#10;    warnings.warn(f&quot;Could not initialize DataController: {e}&quot;)&amp;#10;    print(f&quot;ERROR: {e}&quot;)&amp;#10;&amp;#10;camera_threads = None&amp;#10;if camera_connected_status:&amp;#10;    try:&amp;#10;        camera_threads = init_camera_thread()&amp;#10;        start_camera_thread(camera_threads, mode=&quot;production&quot;)&amp;#10;        logging.info(&quot;✓ Camera recording started&quot;)&amp;#10;    except Exception as e:&amp;#10;        logging.error(f&quot;✗ Camera initialization failed: {e}&quot;)&amp;#10;        warnings.warn(f&quot;Could not start camera recording: {e}&quot;)&amp;#10;&amp;#10;audio_thread = None&amp;#10;if audio_connected_status:&amp;#10;    try:&amp;#10;        audio_thread = init_audio_thread()&amp;#10;        start_audio_thread(audio_thread, mode=&quot;production&quot;)&amp;#10;        logging.info(&quot;✓ Audio recording started&quot;)&amp;#10;    except Exception as e:&amp;#10;        logging.error(f&quot;✗ Audio initialization failed: {e}&quot;)&amp;#10;        warnings.warn(f&quot;Could not start audio recording: {e}&quot;)&amp;#10;&amp;#10;def cleanup_all_resources():&amp;#10;    logging.info(&quot;=&quot; * 50)&amp;#10;    logging.info(&quot;Cleaning up resources...&quot;)&amp;#10;&amp;#10;    if dc:&amp;#10;        try:&amp;#10;            dc.close_conn()&amp;#10;            logging.info(&quot;✓ DataController closed&quot;)&amp;#10;        except Exception as e:&amp;#10;            logging.error(f&quot;✗ Error closing DataController: {e}&quot;)&amp;#10;&amp;#10;    if audio_thread:&amp;#10;        try:&amp;#10;            exit_audio_thread(audio_thread)&amp;#10;            logging.info(&quot;✓ Audio recording stopped&quot;)&amp;#10;        except Exception as e:&amp;#10;            logging.error(f&quot;✗ Error stopping audio: {e}&quot;)&amp;#10;&amp;#10;    if camera_threads:&amp;#10;        try:&amp;#10;            exit_camera_thread(camera_threads)&amp;#10;            logging.info(&quot;✓ Camera recording stopped&quot;)&amp;#10;        except Exception as e:&amp;#10;            logging.error(f&quot;✗ Error stopping cameras: {e}&quot;)&amp;#10;&amp;#10;    logging.info(&quot;=&quot; * 50)&amp;#10;    logging.info(&quot;All resources cleaned up&quot;)&amp;#10;&amp;#10;register_cleanup_function(cleanup_all_resources)&amp;#10;patch_core_quit()&amp;#10;&amp;#10;" valType="extendedCode" updates="constant" name="Before Experiment"/>
+        <Param val="import * as os from 'os';&amp;#10;import * as shutil from 'shutil';&amp;#10;" valType="extendedCode" updates="constant" name="Before JS Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Begin Experiment"/>
+        <Param val="/* Syntax Error: Fix Python code */" valType="extendedCode" updates="constant" name="Begin JS Experiment"/>
+        <Param val="start_camera_thread(cam_threads, {&quot;mode&quot;: &quot;production&quot;});&amp;#10;start_audio_thread(audio_thread, {&quot;mode&quot;: &quot;production&quot;});&amp;#10;" valType="extendedCode" updates="constant" name="Begin JS Routine"/>
+        <Param val="#start_camera_thread(cam_threads, mode='production')&amp;#10;#start_audio_thread(audio_thread, mode='production')&amp;#10;&amp;#10;# 将相机启动的时间保存&amp;#10;camera_t_s = core.monotonicClock.getTime() # s&amp;#10;&amp;#10;# 开始采集与获取信号&amp;#10;# rm.begin_collect()&amp;#10;# 开始routine时，在第8通道打标，并在routine结束时关闭打标&amp;#10;event_id = 8&amp;#10;rm.set_marker(event_id, mode=marker_mode)&amp;#10;# 将当前时间记录下来&amp;#10;marker_t_s = core.monotonicClock.getTime() # s" valType="extendedCode" updates="constant" name="Begin Routine"/>
+        <Param val="Py" valType="str" updates="None" name="Code Type"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Each Frame"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Each JS Frame"/>
+        <Param val="cleanup_all_resources()" valType="extendedCode" updates="constant" name="End Experiment"/>
+        <Param val="force_camera_exit(threads);&amp;#10;force_audio_exit(audio_thread);&amp;#10;" valType="extendedCode" updates="constant" name="End JS Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="End JS Routine"/>
+        <Param val="# 关闭打标&amp;#10;rm.set_marker(0, mode=marker_mode)&amp;#10;thisExp.addData('marker_t_s', marker_t_s)&amp;#10;thisExp.addData('camera_t_s', camera_t_s)&amp;#10;&amp;#10;# 将参数都记录下来&amp;#10;thisExp.addData('trial_repeats',trial_repeats)&amp;#10;thisExp.addData('block_repeats',block_repeats)&amp;#10;" valType="extendedCode" updates="constant" name="End Routine"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="init_device" valType="code" updates="None" name="name"/>
+      </CodeComponent>
+      <TextComponent name="init_text" plugin="None">
+        <Param val="white" valType="color" updates="constant" name="color"/>
+        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
+        <Param val="1" valType="num" updates="constant" name="contrast"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="False" valType="code" updates="constant" name="draggable"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="None" valType="str" updates="constant" name="flip"/>
+        <Param val="Arial" valType="str" updates="constant" name="font"/>
+        <Param val="LTR" valType="str" updates="None" name="languageStyle"/>
+        <Param val="small_text_size" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="init_text" valType="code" updates="None" name="name"/>
+        <Param val="" valType="num" updates="constant" name="opacity"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="(0, 0)" valType="list" updates="constant" name="pos"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="1" valType="code" updates="constant" name="stopVal"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="" valType="str" updates="constant" name="text"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
+        <Param val="" valType="code" updates="None" name="validator"/>
+        <Param val="" valType="num" updates="constant" name="wrapWidth"/>
+      </TextComponent>
+    </Routine>
+    <Routine name="introduction">
+      <RoutineSettingsComponent name="introduction" plugin="None">
+        <Param val="none" valType="str" updates="None" name="backgroundFit"/>
+        <Param val="" valType="str" updates="None" name="backgroundImg"/>
+        <Param val="$[0,0,0]" valType="color" updates="None" name="color"/>
+        <Param val="rgb" valType="str" updates="None" name="colorSpace"/>
+        <Param val="" valType="str" updates="constant" name="desc"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="False" valType="code" updates="None" name="forceNonSlip"/>
+        <Param val="introduction" valType="code" updates="None" name="name"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="constant" name="skipIf"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="False" valType="bool" updates="None" name="useWindowParams"/>
+      </RoutineSettingsComponent>
+      <SerialOutComponent name="intro_serialPort" plugin="None">
+        <Param val="115200" valType="int" updates="None" name="baudrate"/>
+        <Param val="8" valType="int" updates="None" name="bytesize"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="False" valType="bool" updates="None" name="getResponse"/>
+        <Param val="intro_serialPort" valType="code" updates="None" name="name"/>
+        <Param val="N" valType="str" updates="None" name="parity"/>
+        <Param val="$com_port" valType="str" updates="None" name="port"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="8" valType="str" updates="None" name="startdata"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="1" valType="code" updates="constant" name="stopVal"/>
+        <Param val="1" valType="int" updates="None" name="stopbits"/>
+        <Param val="0" valType="str" updates="None" name="stopdata"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="" valType="int" updates="None" name="timeout"/>
+      </SerialOutComponent>
+      <TextComponent name="intro_text" plugin="None">
+        <Param val="white" valType="color" updates="constant" name="color"/>
+        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
+        <Param val="1" valType="num" updates="constant" name="contrast"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="False" valType="code" updates="constant" name="draggable"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="None" valType="str" updates="constant" name="flip"/>
+        <Param val="Arial" valType="str" updates="constant" name="font"/>
+        <Param val="LTR" valType="str" updates="None" name="languageStyle"/>
+        <Param val="small_text_size" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="intro_text" valType="code" updates="None" name="name"/>
+        <Param val="" valType="num" updates="constant" name="opacity"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="(0, 0)" valType="list" updates="constant" name="pos"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="1" valType="code" updates="constant" name="stopVal"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="+" valType="str" updates="constant" name="text"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
+        <Param val="" valType="code" updates="None" name="validator"/>
+        <Param val="" valType="num" updates="constant" name="wrapWidth"/>
+      </TextComponent>
+    </Routine>
+    <Routine name="block_start">
+      <RoutineSettingsComponent name="block_start" plugin="None">
+        <Param val="none" valType="str" updates="None" name="backgroundFit"/>
+        <Param val="" valType="str" updates="None" name="backgroundImg"/>
+        <Param val="$[0,0,0]" valType="color" updates="None" name="color"/>
+        <Param val="rgb" valType="str" updates="None" name="colorSpace"/>
+        <Param val="" valType="str" updates="constant" name="desc"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="False" valType="code" updates="None" name="forceNonSlip"/>
+        <Param val="block_start" valType="code" updates="None" name="name"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="constant" name="skipIf"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="False" valType="bool" updates="None" name="useWindowParams"/>
+      </RoutineSettingsComponent>
+      <CodeComponent name="block_start_code" plugin="None">
+        <Param val="" valType="extendedCode" updates="constant" name="Before Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Before JS Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Begin Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Begin JS Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Begin JS Routine"/>
+        <Param val="#打标 在第四个通道打标&amp;#10;rm.set_marker(4, mode=marker_mode)&amp;#10;# 将当前时间记录下来&amp;#10;marker_t_s = core.monotonicClock.getTime() # s" valType="extendedCode" updates="constant" name="Begin Routine"/>
+        <Param val="Py" valType="str" updates="None" name="Code Type"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Each Frame"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Each JS Frame"/>
+        <Param val="" valType="extendedCode" updates="constant" name="End Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="End JS Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="End JS Routine"/>
+        <Param val="# 保存block_start的时间&amp;#10;thisExp.addData('marker_t_s', marker_t_s)&amp;#10;# 拉低&amp;#10;rm.set_marker(0, mode=marker_mode)" valType="extendedCode" updates="constant" name="End Routine"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="block_start_code" valType="code" updates="None" name="name"/>
+      </CodeComponent>
+      <TextComponent name="start_3" plugin="None">
+        <Param val="white" valType="color" updates="constant" name="color"/>
+        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
+        <Param val="1" valType="num" updates="constant" name="contrast"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="False" valType="code" updates="constant" name="draggable"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="None" valType="str" updates="constant" name="flip"/>
+        <Param val="Arial" valType="str" updates="constant" name="font"/>
+        <Param val="LTR" valType="str" updates="None" name="languageStyle"/>
+        <Param val="0.25" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="start_3" valType="code" updates="None" name="name"/>
+        <Param val="" valType="num" updates="constant" name="opacity"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="(0, 0)" valType="list" updates="constant" name="pos"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="1.0" valType="code" updates="constant" name="stopVal"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="即将开始&amp;#10;3" valType="str" updates="constant" name="text"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
+        <Param val="" valType="code" updates="None" name="validator"/>
+        <Param val="" valType="num" updates="constant" name="wrapWidth"/>
+      </TextComponent>
+      <TextComponent name="start_2" plugin="None">
+        <Param val="white" valType="color" updates="constant" name="color"/>
+        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
+        <Param val="1" valType="num" updates="constant" name="contrast"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="False" valType="code" updates="constant" name="draggable"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="None" valType="str" updates="constant" name="flip"/>
+        <Param val="Arial" valType="str" updates="constant" name="font"/>
+        <Param val="LTR" valType="str" updates="None" name="languageStyle"/>
+        <Param val="0.25" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="start_2" valType="code" updates="None" name="name"/>
+        <Param val="" valType="num" updates="constant" name="opacity"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="(0, 0)" valType="list" updates="constant" name="pos"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="1" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="1.0" valType="code" updates="constant" name="stopVal"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="即将开始&amp;#10;2" valType="str" updates="constant" name="text"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
+        <Param val="" valType="code" updates="None" name="validator"/>
+        <Param val="" valType="num" updates="constant" name="wrapWidth"/>
+      </TextComponent>
+      <TextComponent name="start_1" plugin="None">
+        <Param val="white" valType="color" updates="constant" name="color"/>
+        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
+        <Param val="1" valType="num" updates="constant" name="contrast"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="False" valType="code" updates="constant" name="draggable"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="None" valType="str" updates="constant" name="flip"/>
+        <Param val="Arial" valType="str" updates="constant" name="font"/>
+        <Param val="LTR" valType="str" updates="None" name="languageStyle"/>
+        <Param val="0.25" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="start_1" valType="code" updates="None" name="name"/>
+        <Param val="" valType="num" updates="constant" name="opacity"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="(0, 0)" valType="list" updates="constant" name="pos"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="2" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="1.0" valType="code" updates="constant" name="stopVal"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="即将开始&amp;#10;1" valType="str" updates="constant" name="text"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
+        <Param val="" valType="code" updates="None" name="validator"/>
+        <Param val="" valType="num" updates="constant" name="wrapWidth"/>
+      </TextComponent>
+    </Routine>
+    <Routine name="speech_corpus">
+      <RoutineSettingsComponent name="speech_corpus" plugin="None">
+        <Param val="none" valType="str" updates="None" name="backgroundFit"/>
+        <Param val="" valType="str" updates="None" name="backgroundImg"/>
+        <Param val="$[0,0,0]" valType="color" updates="None" name="color"/>
+        <Param val="rgb" valType="str" updates="None" name="colorSpace"/>
+        <Param val="" valType="str" updates="constant" name="desc"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="False" valType="code" updates="None" name="forceNonSlip"/>
+        <Param val="speech_corpus" valType="code" updates="None" name="name"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="constant" name="skipIf"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="False" valType="bool" updates="None" name="useWindowParams"/>
+      </RoutineSettingsComponent>
+      <CodeComponent name="sentence_code" plugin="None">
+        <Param val="" valType="extendedCode" updates="constant" name="Before Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Before JS Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Begin Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Begin JS Experiment"/>
+        <Param val="/* Syntax Error: Fix Python code */" valType="extendedCode" updates="constant" name="Begin JS Routine"/>
+        <Param val="#打标 在第1个通道打标 意味着开始播放一个回合的音频了&amp;#10;# 整个读语料的过程，第1个通道始终为高&amp;#10;rm.set_marker(1, mode=marker_mode)&amp;#10;&amp;#10;font_size = 0.20  # 保持原来的字体大小&amp;#10;max_line_width = 1.7  # 最大行宽，超过这个宽度会换行&amp;#10;line_spacing = 0.25  # 行间距&amp;#10;vertical_offset = -0.1  # 添加垂直偏移量，负值表示向下移动&amp;#10;&amp;#10;# 获取当前行数据 - 使用PsychoPy提供的变量&amp;#10;words = []&amp;#10;&amp;#10;&amp;#10;# 自动获取所有列名，但排除id列和PsychoPy内部使用的列&amp;#10;excluded_cols = ['id', 'thisN', 'thisBlock_loopN', 'thisSentence_loopN', 'thisRepN']&amp;#10;columns = [col for col in thisSentence_loop.keys() if col not in excluded_cols]&amp;#10;&amp;#10;# 提取所有单词，直到遇到&quot;end&quot;，并处理逗号&amp;#10;for col in columns:&amp;#10;    if col in thisSentence_loop and thisSentence_loop[col]:&amp;#10;        if thisSentence_loop[col] == 'end':&amp;#10;            break  # 遇到&quot;end&quot;立即退出循环&amp;#10;        elif thisSentence_loop[col] == 'comma' and words:  # 如果是逗号且前面有词&amp;#10;            # 将逗号附加到前一个词后面&amp;#10;            words[-1] = words[-1] + ','&amp;#10;        elif thisSentence_loop[col] != 'comma':  # 如果不是逗号，正常添加&amp;#10;            words.append(thisSentence_loop[col])&amp;#10;&amp;#10;&amp;#10;# 计算每个词的位置&amp;#10;word_positions = []&amp;#10;word_spacing = 0.02  # 词之间的间距&amp;#10;&amp;#10;# 计算每个词的宽度&amp;#10;word_widths = []&amp;#10;for word in words:&amp;#10;    # 确保word是字符串类型&amp;#10;    word = str(word)&amp;#10;    # 每个中文字符的宽度大约是字体大小&amp;#10;    # 如果有逗号，额外增加一点宽度&amp;#10;    word_width = len(word.replace(',', '')) * font_size&amp;#10;    if ',' in word:&amp;#10;        word_width += font_size * 0.3  # 逗号宽度稍小&amp;#10;    word_widths.append(word_width)&amp;#10;&amp;#10;# 自动换行处理&amp;#10;lines = []  # 存储每行的词索引&amp;#10;current_line = []&amp;#10;current_line_width = 0&amp;#10;&amp;#10;for i, width in enumerate(word_widths):&amp;#10;    # 如果当前行为空或者添加这个词不会超过最大宽度&amp;#10;    if not current_line or current_line_width + width + word_spacing &lt;= max_line_width:&amp;#10;        current_line.append(i)&amp;#10;        current_line_width += width + (word_spacing if current_line else 0)&amp;#10;    else:&amp;#10;        # 当前行已满，添加到lines并开始新行&amp;#10;        lines.append(current_line)&amp;#10;        current_line = [i]&amp;#10;        current_line_width = width&amp;#10;&amp;#10;# 添加最后一行&amp;#10;if current_line:&amp;#10;    lines.append(current_line)&amp;#10;&amp;#10;# 计算每行的词位置&amp;#10;word_positions = [None] * len(words)  # 预分配位置列表&amp;#10;&amp;#10;for line_idx, line in enumerate(lines):&amp;#10;    # 计算当前行的总宽度&amp;#10;    line_width = sum(word_widths[i] for i in line) + word_spacing * (len(line) - 1)&amp;#10;    &amp;#10;    # 计算起始x坐标，使文本居中&amp;#10;    start_x = -line_width / 2&amp;#10;    &amp;#10;    # 计算y坐标，使多行文本垂直居中，并添加垂直偏移&amp;#10;    total_height = len(lines) * line_spacing&amp;#10;    y = total_height / 2 - line_idx * line_spacing + vertical_offset&amp;#10;    &amp;#10;    # 计算每个词的位置&amp;#10;    current_x = start_x&amp;#10;    for i in line:&amp;#10;        word_center_x = current_x + word_widths[i] / 2&amp;#10;        word_positions[i] = (word_center_x, y)&amp;#10;        current_x += word_widths[i] + word_spacing&amp;#10;&amp;#10;# 创建持久的文本刺激对象，避免每帧重新创建&amp;#10;word_stims = []&amp;#10;for i, word in enumerate(words):&amp;#10;    x, y = word_positions[i]&amp;#10;    word_stim = visual.TextStim(&amp;#10;        win=win,&amp;#10;        text=word,&amp;#10;        font='SimHei',&amp;#10;        pos=(x, y),&amp;#10;        height=font_size,&amp;#10;        color='#333333',  # 默认颜色为深灰色&amp;#10;        wrapWidth=None,    # 不自动换行&amp;#10;        alignText='center',&amp;#10;        anchorHoriz='center',&amp;#10;        anchorVert='center'&amp;#10;    )&amp;#10;    word_stims.append(word_stim)&amp;#10;&amp;#10;# 初始化高亮变量&amp;#10;highlight_started = False&amp;#10;current_word_index = 0  # 改为-1，表示还没开始高亮任何词&amp;#10;#highlight_duration = highlight_duration  # 每个词高亮显示2秒&amp;#10;initial_delay = 0  # 开始前的延迟时间（全灰状态）&amp;#10;final_delay = 0  # 结束后的延迟时间（全灰状态）&amp;#10;routine_start_time = None  # 记录routine开始时间&amp;#10;end_phase_started = False  # 新增：标记是否已进入结束阶段&amp;#10;&amp;#10;&amp;#10;&amp;#10;########### 声音部分 ###########&amp;#10;# 添加到现有代码末尾&amp;#10;word_sounds = []  # 存储音频对象&amp;#10;for word in words:&amp;#10;  try:&amp;#10;      sound_file = f'contents/audios/{word.replace(&quot;,&quot;, &quot;&quot;)}.wav'&amp;#10;      word_sounds.append(sound_file)&amp;#10;  except:&amp;#10;      word_sounds.append(None)  # 如果音频文件不存在&amp;#10;" valType="extendedCode" updates="constant" name="Begin Routine"/>
+        <Param val="Py" valType="str" updates="None" name="Code Type"/>
+        <Param val="# 记录routine开始时间&amp;#10;if routine_start_time is None:&amp;#10;    routine_start_time = t&amp;#10;&amp;#10;# 计算相对于routine开始的时间&amp;#10;relative_time = t - routine_start_time&amp;#10;&amp;#10;# 控制高亮显示&amp;#10;if not end_phase_started:  # 只有在未进入结束阶段时才执行高亮逻辑&amp;#10;    if relative_time &lt; initial_delay:&amp;#10;        # 开始的1秒全灰状态&amp;#10;        current_word_index = 0&amp;#10;    elif not highlight_started and relative_time &gt;= initial_delay:&amp;#10;        # 开始第一个词的高亮&amp;#10;        highlight_started = True&amp;#10;        current_word_index = 0&amp;#10;        highlight_start_time = t&amp;#10;    elif highlight_started and current_word_index &lt; len(words):&amp;#10;        if t &gt;= highlight_start_time + highlight_duration:&amp;#10;            current_word_index += 1&amp;#10;            highlight_start_time = t&amp;#10;&amp;#10;            # 添加音频播放逻辑&amp;#10;            if current_word_index &lt; len(words) and word_sounds[current_word_index]:&amp;#10;                try:&amp;#10;                    word_sound.setSound(word_sounds[current_word_index])&amp;#10;                    word_sound.play()&amp;#10;                except:&amp;#10;                    pass  # 如果音频播放失败，继续执行&amp;#10;&amp;#10;# 判断是否进入结束阶段&amp;#10;if current_word_index &gt;= len(words) and not end_phase_started:&amp;#10;    # 进入结束阶段&amp;#10;    end_phase_started = True  # 标记已进入结束阶段&amp;#10;    end_phase_start_time = t  # 记录结束阶段开始时间&amp;#10;    current_word_index = -1  # 设为-1表示全灰状态&amp;#10;elif end_phase_started:&amp;#10;    # 已在结束阶段，检查是否需要结束routine&amp;#10;    if t &gt;= end_phase_start_time + final_delay:&amp;#10;        continueRoutine = False&amp;#10;&amp;#10;# 更新每个词的颜色并绘制&amp;#10;for i, word_stim in enumerate(word_stims):&amp;#10;    word_stim.color = 'white' if i == current_word_index else '#333333'&amp;#10;    word_stim.draw()&amp;#10;&amp;#10;" valType="extendedCode" updates="constant" name="Each Frame"/>
+        <Param val="/* Syntax Error: Fix Python code */" valType="extendedCode" updates="constant" name="Each JS Frame"/>
+        <Param val="" valType="extendedCode" updates="constant" name="End Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="End JS Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="End JS Routine"/>
+        <Param val="# 每一个句子结束，拉低&amp;#10;rm.set_marker(0, mode=marker_mode)" valType="extendedCode" updates="constant" name="End Routine"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="sentence_code" valType="code" updates="None" name="name"/>
+      </CodeComponent>
+      <TextComponent name="corpus_text" plugin="None">
+        <Param val="white" valType="color" updates="constant" name="color"/>
+        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
+        <Param val="1" valType="num" updates="constant" name="contrast"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="False" valType="code" updates="constant" name="draggable"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="None" valType="str" updates="constant" name="flip"/>
+        <Param val="Arial" valType="str" updates="constant" name="font"/>
+        <Param val="LTR" valType="str" updates="None" name="languageStyle"/>
+        <Param val="0.2" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="corpus_text" valType="code" updates="None" name="name"/>
+        <Param val="" valType="num" updates="constant" name="opacity"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="(0, 0)" valType="list" updates="constant" name="pos"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="60" valType="code" updates="constant" name="stopVal"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="" valType="str" updates="set every repeat" name="text"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
+        <Param val="" valType="code" updates="None" name="validator"/>
+        <Param val="" valType="num" updates="constant" name="wrapWidth"/>
+      </TextComponent>
+      <SoundComponent name="word_sound" plugin="None">
+        <Param val="" valType="str" updates="None" name="deviceLabel"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="True" valType="bool" updates="constant" name="hamming"/>
+        <Param val="word_sound" valType="code" updates="None" name="name"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="$'contents/audios/' + str(words[current_word_index]).replace(',', '') + '.wav'" valType="str" updates="set every repeat" name="sound"/>
+        <Param val="-1" valType="code" updates="None" name="speakerIndex"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="$highlight_duration * len(words)" valType="code" updates="constant" name="stopVal"/>
+        <Param val="True" valType="bool" updates="constant" name="stopWithRoutine"/>
+        <Param val="False" valType="bool" updates="constant" name="syncScreenRefresh"/>
+        <Param val="1" valType="num" updates="constant" name="volume"/>
+      </SoundComponent>
+    </Routine>
+    <Routine name="black_gap">
+      <RoutineSettingsComponent name="black_gap" plugin="None">
+        <Param val="none" valType="str" updates="None" name="backgroundFit"/>
+        <Param val="" valType="str" updates="None" name="backgroundImg"/>
+        <Param val="$[0,0,0]" valType="color" updates="None" name="color"/>
+        <Param val="rgb" valType="str" updates="None" name="colorSpace"/>
+        <Param val="" valType="str" updates="constant" name="desc"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="False" valType="code" updates="None" name="forceNonSlip"/>
+        <Param val="black_gap" valType="code" updates="None" name="name"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="constant" name="skipIf"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="False" valType="bool" updates="None" name="useWindowParams"/>
+      </RoutineSettingsComponent>
+      <CodeComponent name="tqdm" plugin="None">
+        <Param val="" valType="extendedCode" updates="constant" name="Before Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Before JS Experiment"/>
+        <Param val="from tqdm import tqdm&amp;#10;global trial_bar &amp;#10;print(&quot;block_repeats&quot;, block_repeats)&amp;#10;print(&quot;trial_repeats&quot;, trial_repeats)&amp;#10;&amp;#10;total_trials = block_repeats * trial_repeats * total_rows&amp;#10;&amp;#10;&amp;#10;# 初始化进度条，描述文本将在后面动态更新&amp;#10;trial_bar = tqdm(total=total_trials, desc=&quot;实验准备中...&quot;)&amp;#10;&amp;#10;&amp;#10;print(&quot;begin exp&quot;)&amp;#10;" valType="extendedCode" updates="constant" name="Begin Experiment"/>
+        <Param val="/* Syntax Error: Fix Python code */" valType="extendedCode" updates="constant" name="Begin JS Experiment"/>
+        <Param val="trial_bar.update(1);&amp;#10;" valType="extendedCode" updates="constant" name="Begin JS Routine"/>
+        <Param val="# 1. 首先，为即将开始的这个 trial 更新进度条&amp;#10;#    让进度条的数值（如 11/25 -&gt; 12/25）先行一步&amp;#10;trial_bar.update(1)&amp;#10;&amp;#10;# 2. 然后，检查这是否是一个新 block 的开始&amp;#10;#    PsychoPy 会自动创建名为 block_loop 和 trials 的循环处理器&amp;#10;if sentence_loop.thisN == 0:&amp;#10;    # 获取当前 block 的编号 (thisN 从0开始，所以+1)&amp;#10;    current_block = block_loop.thisN + 1&amp;#10;    # 获取总 block 数&amp;#10;    total_blocks = block_loop.nTotal&amp;#10;    &amp;#10;    # 构建新的描述文本&amp;#10;    desc_text = f&quot;block进度：{current_block}/{total_blocks}，总进度&quot;&amp;#10;    &amp;#10;    # 更新描述。这会再次刷新屏幕，但此时进度条的数值已经是正确的了&amp;#10;    trial_bar.set_description(desc_text)" valType="extendedCode" updates="constant" name="Begin Routine"/>
+        <Param val="Py" valType="str" updates="None" name="Code Type"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Each Frame"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Each JS Frame"/>
+        <Param val="trial_bar.close()" valType="extendedCode" updates="constant" name="End Experiment"/>
+        <Param val="trial_bar.close();&amp;#10;" valType="extendedCode" updates="constant" name="End JS Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="End JS Routine"/>
+        <Param val="" valType="extendedCode" updates="constant" name="End Routine"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="tqdm" valType="code" updates="None" name="name"/>
+      </CodeComponent>
+      <TextComponent name="text" plugin="None">
+        <Param val="white" valType="color" updates="constant" name="color"/>
+        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
+        <Param val="1" valType="num" updates="constant" name="contrast"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="False" valType="code" updates="constant" name="draggable"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="None" valType="str" updates="constant" name="flip"/>
+        <Param val="Arial" valType="str" updates="constant" name="font"/>
+        <Param val="LTR" valType="str" updates="None" name="languageStyle"/>
+        <Param val="0.05" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="text" valType="code" updates="None" name="name"/>
+        <Param val="" valType="num" updates="constant" name="opacity"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="(0, 0)" valType="list" updates="constant" name="pos"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="1.0" valType="code" updates="constant" name="stopVal"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="" valType="str" updates="constant" name="text"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
+        <Param val="" valType="code" updates="None" name="validator"/>
+        <Param val="" valType="num" updates="constant" name="wrapWidth"/>
+      </TextComponent>
+    </Routine>
+    <Routine name="block_end">
+      <RoutineSettingsComponent name="block_end" plugin="None">
+        <Param val="none" valType="str" updates="None" name="backgroundFit"/>
+        <Param val="" valType="str" updates="None" name="backgroundImg"/>
+        <Param val="$[0,0,0]" valType="color" updates="None" name="color"/>
+        <Param val="rgb" valType="str" updates="None" name="colorSpace"/>
+        <Param val="" valType="str" updates="constant" name="desc"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="False" valType="code" updates="None" name="forceNonSlip"/>
+        <Param val="block_end" valType="code" updates="None" name="name"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="constant" name="skipIf"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="False" valType="bool" updates="None" name="useWindowParams"/>
+      </RoutineSettingsComponent>
+      <TextComponent name="rest_5" plugin="None">
+        <Param val="white" valType="color" updates="constant" name="color"/>
+        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
+        <Param val="1" valType="num" updates="constant" name="contrast"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="False" valType="code" updates="constant" name="draggable"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="None" valType="str" updates="constant" name="flip"/>
+        <Param val="Arial" valType="str" updates="constant" name="font"/>
+        <Param val="LTR" valType="str" updates="None" name="languageStyle"/>
+        <Param val="0.25" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="rest_5" valType="code" updates="None" name="name"/>
+        <Param val="" valType="num" updates="constant" name="opacity"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="(0, 0)" valType="list" updates="constant" name="pos"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="5" valType="code" updates="constant" name="stopVal"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="回合结束&amp;#10;休息 5s" valType="str" updates="constant" name="text"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
+        <Param val="" valType="code" updates="None" name="validator"/>
+        <Param val="" valType="num" updates="constant" name="wrapWidth"/>
+      </TextComponent>
+    </Routine>
+    <Routine name="over">
+      <RoutineSettingsComponent name="over" plugin="None">
+        <Param val="none" valType="str" updates="None" name="backgroundFit"/>
+        <Param val="" valType="str" updates="None" name="backgroundImg"/>
+        <Param val="$[0,0,0]" valType="color" updates="None" name="color"/>
+        <Param val="rgb" valType="str" updates="None" name="colorSpace"/>
+        <Param val="" valType="str" updates="constant" name="desc"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="False" valType="code" updates="None" name="forceNonSlip"/>
+        <Param val="over" valType="code" updates="None" name="name"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="constant" name="skipIf"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="False" valType="bool" updates="None" name="useWindowParams"/>
+      </RoutineSettingsComponent>
+      <TextComponent name="end_text" plugin="None">
+        <Param val="white" valType="color" updates="constant" name="color"/>
+        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
+        <Param val="1" valType="num" updates="constant" name="contrast"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="False" valType="code" updates="constant" name="draggable"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="None" valType="str" updates="constant" name="flip"/>
+        <Param val="Arial" valType="str" updates="constant" name="font"/>
+        <Param val="LTR" valType="str" updates="None" name="languageStyle"/>
+        <Param val="0.25" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="end_text" valType="code" updates="None" name="name"/>
+        <Param val="" valType="num" updates="constant" name="opacity"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="(0, 0)" valType="list" updates="constant" name="pos"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="1" valType="code" updates="constant" name="stopVal"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="全部结束&amp;#10;谢谢" valType="str" updates="constant" name="text"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
+        <Param val="" valType="code" updates="None" name="validator"/>
+        <Param val="" valType="num" updates="constant" name="wrapWidth"/>
+      </TextComponent>
+      <KeyboardComponent name="key_resp_2" plugin="None">
+        <Param val="'space'" valType="list" updates="constant" name="allowedKeys"/>
+        <Param val="" valType="str" updates="constant" name="correctAns"/>
+        <Param val="" valType="str" updates="None" name="deviceLabel"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="True" valType="bool" updates="constant" name="discard previous"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="True" valType="bool" updates="constant" name="forceEndRoutine"/>
+        <Param val="key_resp_2" valType="code" updates="None" name="name"/>
+        <Param val="press" valType="str" updates="constant" name="registerOn"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="1" valType="code" updates="constant" name="stopVal"/>
+        <Param val="last key" valType="str" updates="constant" name="store"/>
+        <Param val="False" valType="bool" updates="constant" name="storeCorrect"/>
+        <Param val="True" valType="bool" updates="constant" name="syncScreenRefresh"/>
+      </KeyboardComponent>
+    </Routine>
+  </Routines>
+  <Flow>
+    <Routine name="initialization"/>
+    <LoopInitiator loopType="TrialHandler" name="block_loop">
+      <Param name="Selected rows" updates="None" val="" valType="str"/>
+      <Param name="conditions" updates="None" val="[OrderedDict([('id', 1), ('first', '大家'), ('second', '好'), ('third', 'comma'), ('fourth', '我'), ('fifth', '很'), ('sixth', '开心'), ('seventh', 'end'), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 2), ('first', '你好'), ('second', 'comma'), ('third', '很'), ('fourth', '开心'), ('fifth', '认识'), ('sixth', '你们'), ('seventh', 'end'), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 3), ('first', '大家'), ('second', '好'), ('third', 'end'), ('fourth', None), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 4), ('first', '我'), ('second', '很'), ('third', '开心'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 5), ('first', '你'), ('second', '好'), ('third', 'comma'), ('fourth', '我'), ('fifth', '很'), ('sixth', '开心'), ('seventh', 'end'), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 6), ('first', '你好'), ('second', 'comma'), ('third', '很'), ('fourth', '开心'), ('fifth', '认识'), ('sixth', '你'), ('seventh', 'end'), ('eighth', '单行最大长度'), ('ninth', 'end后面都忽略'), ('tenth', None)]), OrderedDict([('id', 7), ('first', '你们'), ('second', '好'), ('third', 'comma'), ('fourth', '大家'), ('fifth', '好'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 8), ('first', '早上'), ('second', '好'), ('third', 'end'), ('fourth', None), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 9), ('first', '你们'), ('second', '好'), ('third', 'comma'), ('fourth', '我'), ('fifth', '很'), ('sixth', '开心'), ('seventh', '认识'), ('eighth', '大家'), ('ninth', 'end'), ('tenth', None)]), OrderedDict([('id', 10), ('first', '他们'), ('second', '开心'), ('third', '吗'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 11), ('first', '我'), ('second', '感觉'), ('third', '很'), ('fourth', '开心'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)])]" valType="str"/>
+      <Param name="conditionsFile" updates="None" val="" valType="file"/>
+      <Param name="endPoints" updates="None" val="[0, 1]" valType="num"/>
+      <Param name="isTrials" updates="None" val="True" valType="bool"/>
+      <Param name="loopType" updates="None" val="sequential" valType="str"/>
+      <Param name="nReps" updates="None" val="block_repeats" valType="num"/>
+      <Param name="name" updates="None" val="block_loop" valType="code"/>
+      <Param name="random seed" updates="None" val="" valType="code"/>
+    </LoopInitiator>
+    <Routine name="block_start"/>
+    <LoopInitiator loopType="TrialHandler" name="sentence_loop">
+      <Param name="Selected rows" updates="None" val="$selected_rows" valType="str"/>
+      <Param name="conditions" updates="None" val="[OrderedDict([('id', 1), ('first', '早上'), ('second', '好'), ('third', 'end'), ('fourth', None), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 2), ('first', '晚上'), ('second', '好'), ('third', 'end'), ('fourth', None), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 3), ('first', '大家'), ('second', '好'), ('third', 'end'), ('fourth', None), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 4), ('first', '你们'), ('second', '好'), ('third', 'end'), ('fourth', None), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 5), ('first', '你'), ('second', '好'), ('third', 'end'), ('fourth', None), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 6), ('first', '你'), ('second', '好'), ('third', 'comma'), ('fourth', '很'), ('fifth', '开心'), ('sixth', '认识'), ('seventh', '你'), ('eighth', 'end'), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 7), ('first', '你们'), ('second', '好'), ('third', 'comma'), ('fourth', '我'), ('fifth', '很'), ('sixth', '开心'), ('seventh', '认识'), ('eighth', '大家'), ('ninth', 'end'), ('tenth', None)]), OrderedDict([('id', 8), ('first', '大家'), ('second', '好'), ('third', 'comma'), ('fourth', '我'), ('fifth', '很'), ('sixth', '开心'), ('seventh', '认识'), ('eighth', '你们'), ('ninth', 'end'), ('tenth', None)]), OrderedDict([('id', 9), ('first', '我'), ('second', '感觉'), ('third', '很'), ('fourth', '好'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 10), ('first', '我'), ('second', '感觉'), ('third', '很'), ('fourth', '开心'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 11), ('first', '我'), ('second', '很'), ('third', '好'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 12), ('first', '我'), ('second', '很'), ('third', '开心'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 13), ('first', '你'), ('second', '感觉'), ('third', '好'), ('fourth', '点'), ('fifth', '了'), ('sixth', '吗'), ('seventh', 'end'), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 14), ('first', '你'), ('second', '好'), ('third', '点'), ('fourth', '了'), ('fifth', '吗'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 15), ('first', '他'), ('second', '感觉'), ('third', '好'), ('fourth', '点'), ('fifth', '了'), ('sixth', '吗'), ('seventh', 'end'), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 16), ('first', '他'), ('second', '好'), ('third', '点'), ('fourth', '了'), ('fifth', '吗'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 17), ('first', '你们'), ('second', '感觉'), ('third', '好'), ('fourth', '点'), ('fifth', '了'), ('sixth', '吗'), ('seventh', 'end'), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 18), ('first', '你们'), ('second', '好'), ('third', '点'), ('fourth', '了'), ('fifth', '吗'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 19), ('first', '他们'), ('second', '感觉'), ('third', '好'), ('fourth', '点'), ('fifth', '了'), ('sixth', '吗'), ('seventh', 'end'), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 20), ('first', '他们'), ('second', '好'), ('third', '点'), ('fourth', '了'), ('fifth', '吗'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 21), ('first', '感觉'), ('second', '我'), ('third', '需要'), ('fourth', '你'), ('fifth', '帮忙'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 22), ('first', '感觉'), ('second', '我'), ('third', '需要'), ('fourth', '他'), ('fifth', '帮忙'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 23), ('first', '感觉'), ('second', '我'), ('third', '需要'), ('fourth', '你们'), ('fifth', '帮忙'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 24), ('first', '感觉'), ('second', '我'), ('third', '需要'), ('fourth', '他们'), ('fifth', '帮忙'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 25), ('first', '我'), ('second', '需要'), ('third', '你'), ('fourth', '帮忙'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 26), ('first', '我'), ('second', '需要'), ('third', '他'), ('fourth', '帮忙'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 27), ('first', '我'), ('second', '需要'), ('third', '你们'), ('fourth', '帮忙'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 28), ('first', '我'), ('second', '需要'), ('third', '他们'), ('fourth', '帮忙'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 29), ('first', '你'), ('second', '开心'), ('third', '吗'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 30), ('first', '他'), ('second', '开心'), ('third', '吗'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 31), ('first', '你们'), ('second', '开心'), ('third', '吗'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 32), ('first', '他们'), ('second', '开心'), ('third', '吗'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 33), ('first', '他'), ('second', '很'), ('third', '开心'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 34), ('first', '他'), ('second', '很'), ('third', '好'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 35), ('first', '他们'), ('second', '很'), ('third', '开心'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 36), ('first', '他们'), ('second', '很'), ('third', '好'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 37), ('first', '你'), ('second', '好'), ('third', 'comma'), ('fourth', '我'), ('fifth', '需要'), ('sixth', '帮忙'), ('seventh', 'end'), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 38), ('first', '你'), ('second', '好'), ('third', 'comma'), ('fourth', '我'), ('fifth', '需要'), ('sixth', '早餐'), ('seventh', 'end'), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 39), ('first', '你'), ('second', '好'), ('third', 'comma'), ('fourth', '我'), ('fifth', '需要'), ('sixth', '晚餐'), ('seventh', 'end'), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 40), ('first', '你'), ('second', '好'), ('third', 'comma'), ('fourth', '我'), ('fifth', '需要'), ('sixth', '运动'), ('seventh', 'end'), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 41), ('first', '我'), ('second', '需要'), ('third', '帮忙'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 42), ('first', '我'), ('second', '需要'), ('third', '早餐'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 43), ('first', '我'), ('second', '需要'), ('third', '晚餐'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 44), ('first', '我'), ('second', '需要'), ('third', '运动'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 45), ('first', '早上'), ('second', '好'), ('third', 'comma'), ('fourth', '你'), ('fifth', '需要'), ('sixth', '帮忙'), ('seventh', '吗'), ('eighth', 'end'), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 46), ('first', '早上'), ('second', '好'), ('third', 'comma'), ('fourth', '你'), ('fifth', '需要'), ('sixth', '早餐'), ('seventh', '吗'), ('eighth', 'end'), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 47), ('first', '早上'), ('second', '好'), ('third', 'comma'), ('fourth', '你'), ('fifth', '需要'), ('sixth', '晚餐'), ('seventh', '吗'), ('eighth', 'end'), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 48), ('first', '早上'), ('second', '好'), ('third', 'comma'), ('fourth', '你'), ('fifth', '需要'), ('sixth', '休息'), ('seventh', '吗'), ('eighth', 'end'), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 49), ('first', '早上'), ('second', '好'), ('third', 'comma'), ('fourth', '你'), ('fifth', '需要'), ('sixth', '运动'), ('seventh', '吗'), ('eighth', 'end'), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 50), ('first', '晚上'), ('second', '好'), ('third', 'comma'), ('fourth', '你'), ('fifth', '需要'), ('sixth', '帮忙'), ('seventh', '吗'), ('eighth', 'end'), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 51), ('first', '晚上'), ('second', '好'), ('third', 'comma'), ('fourth', '你'), ('fifth', '需要'), ('sixth', '早餐'), ('seventh', '吗'), ('eighth', 'end'), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 52), ('first', '晚上'), ('second', '好'), ('third', 'comma'), ('fourth', '你'), ('fifth', '需要'), ('sixth', '晚餐'), ('seventh', '吗'), ('eighth', 'end'), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 53), ('first', '晚上'), ('second', '好'), ('third', 'comma'), ('fourth', '你'), ('fifth', '需要'), ('sixth', '休息'), ('seventh', '吗'), ('eighth', 'end'), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 54), ('first', '晚上'), ('second', '好'), ('third', 'comma'), ('fourth', '你'), ('fifth', '需要'), ('sixth', '运动'), ('seventh', '吗'), ('eighth', 'end'), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 55), ('first', '你'), ('second', '吃'), ('third', '早餐'), ('fourth', '了'), ('fifth', '吗'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 56), ('first', '你'), ('second', '吃'), ('third', '中餐'), ('fourth', '了'), ('fifth', '吗'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 57), ('first', '你'), ('second', '吃'), ('third', '晚餐'), ('fourth', '了'), ('fifth', '吗'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 58), ('first', '他'), ('second', '吃'), ('third', '早餐'), ('fourth', '了'), ('fifth', '吗'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 59), ('first', '他'), ('second', '吃'), ('third', '中餐'), ('fourth', '了'), ('fifth', '吗'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 60), ('first', '他'), ('second', '吃'), ('third', '晚餐'), ('fourth', '了'), ('fifth', '吗'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 61), ('first', '你们'), ('second', '吃'), ('third', '早餐'), ('fourth', '了'), ('fifth', '吗'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 62), ('first', '你们'), ('second', '吃'), ('third', '中餐'), ('fourth', '了'), ('fifth', '吗'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 63), ('first', '你们'), ('second', '吃'), ('third', '晚餐'), ('fourth', '了'), ('fifth', '吗'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 64), ('first', '他们'), ('second', '吃'), ('third', '早餐'), ('fourth', '了'), ('fifth', '吗'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 65), ('first', '他们'), ('second', '吃'), ('third', '中餐'), ('fourth', '了'), ('fifth', '吗'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 66), ('first', '他们'), ('second', '吃'), ('third', '晚餐'), ('fourth', '了'), ('fifth', '吗'), ('sixth', 'end'), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 67), ('first', '感觉'), ('second', '你'), ('third', '需要'), ('fourth', '帮忙'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 68), ('first', '感觉'), ('second', '你'), ('third', '需要'), ('fourth', '休息'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 69), ('first', '感觉'), ('second', '你'), ('third', '需要'), ('fourth', '运动'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 70), ('first', '感觉'), ('second', '他'), ('third', '需要'), ('fourth', '帮忙'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 71), ('first', '感觉'), ('second', '他'), ('third', '需要'), ('fourth', '休息'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 72), ('first', '感觉'), ('second', '他'), ('third', '需要'), ('fourth', '运动'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 73), ('first', '感觉'), ('second', '你们'), ('third', '需要'), ('fourth', '帮忙'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 74), ('first', '感觉'), ('second', '你们'), ('third', '需要'), ('fourth', '休息'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 75), ('first', '感觉'), ('second', '你们'), ('third', '需要'), ('fourth', '运动'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 76), ('first', '感觉'), ('second', '他们'), ('third', '需要'), ('fourth', '帮忙'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 77), ('first', '感觉'), ('second', '他们'), ('third', '需要'), ('fourth', '休息'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 78), ('first', '感觉'), ('second', '他们'), ('third', '需要'), ('fourth', '运动'), ('fifth', 'end'), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 79), ('first', '你'), ('second', '需要'), ('third', '帮忙'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 80), ('first', '你'), ('second', '需要'), ('third', '休息'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 81), ('first', '你'), ('second', '需要'), ('third', '运动'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 82), ('first', '他'), ('second', '需要'), ('third', '帮忙'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 83), ('first', '他'), ('second', '需要'), ('third', '休息'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 84), ('first', '他'), ('second', '需要'), ('third', '运动'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 85), ('first', '你们'), ('second', '需要'), ('third', '帮忙'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 86), ('first', '你们'), ('second', '需要'), ('third', '休息'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 87), ('first', '你们'), ('second', '需要'), ('third', '运动'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 88), ('first', '他们'), ('second', '需要'), ('third', '帮忙'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 89), ('first', '他们'), ('second', '需要'), ('third', '休息'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)]), OrderedDict([('id', 90), ('first', '他们'), ('second', '需要'), ('third', '运动'), ('fourth', 'end'), ('fifth', None), ('sixth', None), ('seventh', None), ('eighth', None), ('ninth', None), ('tenth', None)])]" valType="str"/>
+      <Param name="conditionsFile" updates="None" val="$conditions_file" valType="file"/>
+      <Param name="endPoints" updates="None" val="[0, 1]" valType="num"/>
+      <Param name="isTrials" updates="None" val="True" valType="bool"/>
+      <Param name="loopType" updates="None" val="sequential" valType="str"/>
+      <Param name="nReps" updates="None" val="trial_repeats" valType="num"/>
+      <Param name="name" updates="None" val="sentence_loop" valType="code"/>
+      <Param name="random seed" updates="None" val="random_seed" valType="code"/>
+    </LoopInitiator>
+    <Routine name="speech_corpus"/>
+    <Routine name="black_gap"/>
+    <LoopTerminator name="sentence_loop"/>
+    <Routine name="block_end"/>
+    <LoopTerminator name="block_loop"/>
+    <Routine name="over"/>
+  </Flow>
+</PsychoPy2experiment>

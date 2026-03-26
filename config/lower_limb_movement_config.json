@@ -18,15 +18,25 @@
             "isp_format": "BGR8"
         }
     },
+
+    "peripheral_stats": {
+        "is_camera_connected" : false,
+        "is_audio_connected": false
+    },
+
     "experiment": {
+        "host":"127.0.0.1",
+		"port":5001,
         "com_port": "COM7",
         "big_text_size": 0.25,
         "small_text_size": 0.25,
         "trial_repeats": 1,
 		"block_repeats": 1,
-		"task_desc":{"":"粗大"},
+		"task_desc":{"1":"粗大"},
 		"task_type":1,
         "random_seed": 42,
-        "conditions":"condition.csv"
+        "sound_dir": "D:\\dev\\FullyImplantedDecoder\\resources\\audios\\lower_limb_movement",
+        "conditions":"D:\\dev\\FullyImplantedDecoder\\resources\\conditions\\lower_limb_movement\\condition.csv",
+        "block_conditions": "D:\\dev\\FullyImplantedDecoder\\resources\\conditions\\lower_limb_movement\\block_condition.csv"
     }
 }

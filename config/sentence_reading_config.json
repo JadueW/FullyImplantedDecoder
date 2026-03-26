@@ -25,7 +25,16 @@
         "format": 8,
         "device_index": null
     },
+
+    "peripheral_stats": {
+        "is_camera_connected" : false,
+        "is_audio_connected": false
+    },
+
+
     "experiment": {
+        "host":"127.0.0.1",
+		"port":5001,
         "com_port": "COM7",
         "big_text_size": 0.2,
         "small_text_size": 0.1,
@@ -37,6 +46,7 @@
 		"selected_rows_desc":"左开右闭",
         "selected_rows": "0:10",
         "random_seed": 42,
-        "conditions":"expanded_sentences.csv"
+        "conditions":"D:\\dev\\FullyImplantedDecoder\\resources\\conditions\\sentence_reading\\expanded_sentences.csv",
+        "sound_dir": "D:\\dev\\FullyImplantedDecoder\\resources\\audios\\sentence_reading"
     }
 }

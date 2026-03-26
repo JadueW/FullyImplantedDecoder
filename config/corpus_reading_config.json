@@ -27,7 +27,14 @@
         "format": 8
     },
 
+    "peripheral_stats": {
+        "is_camera_connected": false,
+        "is_audio_connected": false
+    },
+
     "experiment": {
+        "host":"127.0.0.1",
+		"port":5001,
         "com_port": "COM3",
         "big_text_size": 0.25,
         "small_text_size": 0.25,
@@ -38,6 +45,7 @@
 		"selected_rows_desc":"左开右闭",
         "selected_rows": "0:25",
         "random_seed": 42,
-        "conditions":"welinking_corpus_all.csv"
+        "conditions":"D:\\dev\\FullyImplantedDecoder\\resources\\conditions\\corpus_reading\\welinking_corpus_all.csv",
+        "sound_dir": "D:\\dev\\FullyImplantedDecoder\\resources\\audios\\corpus_reading"
     }
 }
